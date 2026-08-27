@@ -80,4 +80,54 @@ describe('capture page', () => {
     view.unmount();
     expect(instances[0].dispose).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the selected conversation when a packet is selected', async () => {
+    const secondFlowDocument = {
+      ...demoDocument,
+      endpoints: [
+        ...demoDocument.endpoints,
+        {
+          id: 'endpoint-other-client',
+          address: '203.0.113.10',
+          port: 40000,
+          addressFamily: 'ipv4' as const,
+        },
+        {
+          id: 'endpoint-other-server',
+          address: '203.0.113.20',
+          port: 8443,
+          addressFamily: 'ipv4' as const,
+        },
+      ],
+      flows: [
+        ...demoDocument.flows,
+        {
+          id: 'tcp-flow-2',
+          protocol: 'TCP' as const,
+          clientEndpointId: 'endpoint-other-client',
+          serverEndpointId: 'endpoint-other-server',
+          startTimestampNs: '1000000000',
+          endTimestampNs: '1020000000',
+          packetNumbers: [1],
+          capturedBytes: 54,
+          originalBytes: 54,
+          handshake: 'partial' as const,
+          termination: 'unknown' as const,
+          events: [],
+        },
+      ],
+    };
+    render(Page);
+    instances[0].parse.mockResolvedValue(secondFlowDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture()] },
+    });
+    const secondFlow = await screen.findByRole('button', {
+      name: /203\.0\.113\.10.*203\.0\.113\.20/i,
+    });
+    await secondFlow.click();
+    expect(secondFlow).toHaveAttribute('aria-pressed', 'true');
+    await screen.getByRole('button', { name: /packet 1/i }).click();
+    expect(secondFlow).toHaveAttribute('aria-pressed', 'true');
+  });
 });

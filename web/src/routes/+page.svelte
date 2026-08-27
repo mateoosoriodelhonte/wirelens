@@ -36,9 +36,15 @@
     isBrowser = true;
     const parser = new ParserClient();
     captureStore = createCaptureStore(parser);
+    let lastReadyDocument: CaptureDocument | null = null;
     const unsubscribe = captureStore.subscribe((next) => {
       captureState = next;
-      if (next.status === 'ready') selectedFlowId = next.document.flows[0]?.id ?? '';
+      if (next.status !== 'ready') {
+        lastReadyDocument = null;
+      } else if (next.document !== lastReadyDocument) {
+        lastReadyDocument = next.document;
+        selectedFlowId = next.document.flows[0]?.id ?? '';
+      }
     });
     return () => {
       unsubscribe();
