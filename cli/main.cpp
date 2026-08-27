@@ -31,8 +31,10 @@ int main(int argc, char** argv) {
   }
   input.seekg(0, std::ios::beg);
   std::vector<std::byte> bytes(static_cast<std::size_t>(end));
-  if (!bytes.empty()) input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  if (!input && !input.eof()) {
+  const auto expected = static_cast<std::streamsize>(bytes.size());
+  if (expected != 0)
+    input.read(reinterpret_cast<char*>(bytes.data()), expected);
+  if (input.gcount() != expected) {
     std::cerr << "Unable to read capture: " << path << "\n";
     return 2;
   }
@@ -44,6 +46,7 @@ int main(int argc, char** argv) {
   }
   const auto& capture = std::get<wirelens::CaptureDocument>(result);
   std::cout << (json ? wirelens::serialize_capture(capture) : wirelens::format_summary(capture));
-  if (json) std::cout << '\n';
+  if (json)
+    std::cout << '\n';
   return 0;
 }

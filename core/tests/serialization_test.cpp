@@ -1,6 +1,6 @@
+#include "fixture_builder.hpp"
 #include "wirelens/parser.hpp"
 #include "wirelens/serialize.hpp"
-#include "fixture_builder.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

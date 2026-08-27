@@ -9,4 +9,4 @@ namespace wirelens {
 [[nodiscard]] std::string serialize_capture(const CaptureDocument& capture);
 [[nodiscard]] std::string format_summary(const CaptureDocument& capture);
 
-}  // namespace wirelens
+} // namespace wirelens

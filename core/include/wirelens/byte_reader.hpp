@@ -8,7 +8,7 @@
 namespace wirelens {
 
 class ByteReader {
- public:
+public:
   explicit ByteReader(std::span<const std::byte> bytes) : bytes_(bytes) {}
 
   [[nodiscard]] std::optional<std::uint8_t> read_u8();
@@ -21,10 +21,10 @@ class ByteReader {
   [[nodiscard]] std::size_t position() const { return position_; }
   [[nodiscard]] std::size_t remaining() const { return bytes_.size() - position_; }
 
- private:
+private:
   [[nodiscard]] bool can_read(std::size_t length) const;
   std::span<const std::byte> bytes_;
   std::size_t position_ = 0;
 };
 
-}  // namespace wirelens
+} // namespace wirelens

@@ -15,4 +15,4 @@ using ParseResult = std::variant<CaptureDocument, ParseError>;
 
 [[nodiscard]] ParseResult parse_capture(std::span<const std::byte> bytes);
 
-}  // namespace wirelens
+} // namespace wirelens

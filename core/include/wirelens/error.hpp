@@ -13,4 +13,4 @@ struct ParseError {
   std::optional<std::size_t> packetNumber;
 };
 
-}  // namespace wirelens
+} // namespace wirelens

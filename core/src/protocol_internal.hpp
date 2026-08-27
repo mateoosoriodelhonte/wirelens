@@ -26,15 +26,14 @@ struct ParsedPacket {
 };
 
 std::optional<ProtocolLayer> decode_tcp(std::span<const std::byte> payload,
-                                        std::size_t captureOffset,
-                                        std::size_t packetOffset, TcpFacts& facts);
+                                        std::size_t captureOffset, std::size_t packetOffset,
+                                        TcpFacts& facts);
 std::optional<ProtocolLayer> decode_ipv4(std::span<const std::byte> payload,
-                                          std::size_t captureOffset,
-                                          std::size_t packetOffset, TcpFacts& facts,
-                                          Packet& packet);
-void decode_ethernet(std::span<const std::byte> frame, std::size_t captureOffset,
-                     Packet& packet, TcpFacts& facts);
+                                         std::size_t captureOffset, std::size_t packetOffset,
+                                         TcpFacts& facts, Packet& packet);
+void decode_ethernet(std::span<const std::byte> frame, std::size_t captureOffset, Packet& packet,
+                     TcpFacts& facts);
 void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 std::string flag_text(std::uint8_t flags);
 
-}  // namespace wirelens::internal
+} // namespace wirelens::internal

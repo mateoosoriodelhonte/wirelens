@@ -116,4 +116,4 @@ struct CaptureDocument {
   std::vector<Diagnostic> diagnostics;
 };
 
-}  // namespace wirelens
+} // namespace wirelens

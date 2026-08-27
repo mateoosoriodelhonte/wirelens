@@ -1,5 +1,5 @@
-#include "wirelens/parser.hpp"
 #include "fixture_builder.hpp"
+#include "wirelens/parser.hpp"
 
 #include <array>
 #include <catch2/catch_test_macros.hpp>
@@ -13,8 +13,13 @@ TEST_CASE("parse_capture rejects a truncated global header") {
 
 TEST_CASE("parse_capture accepts an empty valid capture") {
   std::vector<std::byte> bytes(24, std::byte{0});
-  bytes[0] = std::byte{0xd4}; bytes[1] = std::byte{0xc3}; bytes[2] = std::byte{0xb2}; bytes[3] = std::byte{0xa1};
-  bytes[4] = std::byte{2}; bytes[6] = std::byte{4}; bytes[20] = std::byte{1};
+  bytes[0] = std::byte{0xd4};
+  bytes[1] = std::byte{0xc3};
+  bytes[2] = std::byte{0xb2};
+  bytes[3] = std::byte{0xa1};
+  bytes[4] = std::byte{2};
+  bytes[6] = std::byte{4};
+  bytes[20] = std::byte{1};
   const auto result = wirelens::parse_capture(bytes);
   REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
   REQUIRE(std::get<wirelens::CaptureDocument>(result).packets.empty());
@@ -41,15 +46,26 @@ TEST_CASE("parse_capture decodes the deterministic three packet handshake") {
 }
 
 TEST_CASE("parse_capture accepts all classic magic and byte orders") {
-  const std::array<std::array<std::uint8_t, 4>, 4> magics{{
-      {0xd4, 0xc3, 0xb2, 0xa1}, {0xa1, 0xb2, 0xc3, 0xd4},
-      {0x4d, 0x3c, 0xb2, 0xa1}, {0xa1, 0xb2, 0x3c, 0x4d}}};
+  const std::array<std::array<std::uint8_t, 4>, 4> magics{{{0xd4, 0xc3, 0xb2, 0xa1},
+                                                           {0xa1, 0xb2, 0xc3, 0xd4},
+                                                           {0x4d, 0x3c, 0xb2, 0xa1},
+                                                           {0xa1, 0xb2, 0x3c, 0x4d}}};
   for (const auto magic : magics) {
     std::vector<std::byte> bytes(24, std::byte{0});
-    for (std::size_t i = 0; i < 4; ++i) bytes[i] = static_cast<std::byte>(magic[i]);
+    for (std::size_t i = 0; i < 4; ++i)
+      bytes[i] = static_cast<std::byte>(magic[i]);
     const bool little = magic[0] == 0xd4 || magic[0] == 0x4d;
-    if (little) { bytes[4] = std::byte{2}; bytes[6] = std::byte{4}; bytes[20] = std::byte{1}; }
-    else { bytes[4] = std::byte{0}; bytes[5] = std::byte{2}; bytes[6] = std::byte{0}; bytes[7] = std::byte{4}; bytes[23] = std::byte{1}; }
+    if (little) {
+      bytes[4] = std::byte{2};
+      bytes[6] = std::byte{4};
+      bytes[20] = std::byte{1};
+    } else {
+      bytes[4] = std::byte{0};
+      bytes[5] = std::byte{2};
+      bytes[6] = std::byte{0};
+      bytes[7] = std::byte{4};
+      bytes[23] = std::byte{1};
+    }
     const auto result = wirelens::parse_capture(bytes);
     REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
   }
@@ -64,7 +80,8 @@ TEST_CASE("protocol truncation keeps valid outer layers") {
     const auto result = wirelens::parse_capture(bytes);
     REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
     const auto& packet = std::get<wirelens::CaptureDocument>(result).packets.at(0);
-    REQUIRE(packet.layers.size() == (frameLength < 14U ? 0U : (frameLength < 34U ? 1U : (frameLength < 54U ? 2U : 3U))));
+    REQUIRE(packet.layers.size() ==
+            (frameLength < 14U ? 0U : (frameLength < 34U ? 1U : (frameLength < 54U ? 2U : 3U))));
   }
 }
 

@@ -1,5 +1,5 @@
-#include "wirelens/parser.hpp"
 #include "fixture_builder.hpp"
+#include "wirelens/parser.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -17,6 +17,7 @@ TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   REQUIRE(ipv4.fields.at(3).value == "64");
   const auto& tcp = packet.layers.at(2);
   REQUIRE(tcp.protocol == "TCP");
+  REQUIRE(tcp.explanationKey == "tcp");
   REQUIRE(tcp.fields.at(0).value == "51515");
   REQUIRE(tcp.fields.at(1).value == "443");
   REQUIRE(tcp.fields.at(2).value == "1000");
@@ -30,7 +31,10 @@ TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   REQUIRE(packets.at(1).layers.at(2).fields.at(2).value == "5000");
   REQUIRE(packets.at(1).layers.at(2).fields.at(3).value == "1001");
   REQUIRE(packets.at(1).layers.at(2).fields.at(5).value == "SYN + ACK");
+  REQUIRE(packets.at(1).layers.at(2).fields.at(5).explanationKey == "tcp.syn-ack");
   REQUIRE(packets.at(2).layers.at(2).fields.at(2).value == "1001");
   REQUIRE(packets.at(2).layers.at(2).fields.at(3).value == "5001");
   REQUIRE(packets.at(2).layers.at(2).fields.at(5).value == "ACK");
+  REQUIRE(packets.at(2).layers.at(2).fields.at(5).explanationKey == "tcp.ack");
+  REQUIRE(packets.at(0).layers.at(2).fields.at(5).explanationKey == "tcp.syn");
 }
