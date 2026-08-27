@@ -43,6 +43,19 @@ struct DirectionSequenceState {
   std::uint64_t epoch = 0;
 };
 
+using DirectionEpochKey = std::pair<bool, std::uint64_t>;
+
+struct RangeState {
+  std::map<std::uint64_t, std::uint64_t> intervals;
+  bool ambiguous = false;
+};
+
+struct PendingRetransmission {
+  DirectionEpochKey directionEpoch;
+  std::size_t priorPacketNumber = 0;
+  std::size_t packetNumber = 0;
+};
+
 struct FlowState {
   Flow flow;
   TcpFacts firstTcp;
@@ -107,6 +120,37 @@ std::uint64_t sequence_epoch(DirectionSequenceState& direction, const std::uint3
   return direction.epoch;
 }
 
+bool interval_overlaps(const std::map<std::uint64_t, std::uint64_t>& intervals,
+                       const std::uint64_t start, const std::uint64_t end) {
+  const auto next = intervals.lower_bound(start);
+  if (next != intervals.end() && next->first < end)
+    return true;
+  if (next != intervals.begin()) {
+    const auto previous = std::prev(next);
+    return previous->second > start;
+  }
+  return false;
+}
+
+void add_distinct_range(RangeState& state, const std::uint32_t sequence, const std::uint32_t span) {
+  if (state.ambiguous)
+    return;
+  constexpr std::uint64_t serialSpace = std::uint64_t{1} << 32U;
+  const auto start = static_cast<std::uint64_t>(sequence);
+  const auto unboundedEnd = start + span;
+  const auto firstEnd = std::min(unboundedEnd, serialSpace);
+  const auto wrappedEnd = unboundedEnd > serialSpace ? unboundedEnd - serialSpace : 0U;
+  if (interval_overlaps(state.intervals, start, firstEnd) ||
+      (wrappedEnd > 0U && interval_overlaps(state.intervals, 0U, wrappedEnd))) {
+    state.ambiguous = true;
+    state.intervals.clear();
+    return;
+  }
+  state.intervals.emplace(start, firstEnd);
+  if (wrappedEnd > 0U)
+    state.intervals.emplace(0U, wrappedEnd);
+}
+
 bool same_payload(const std::span<const std::byte> left, const std::span<const std::byte> right) {
   return left.size() == right.size() && std::equal(left.begin(), left.end(), right.begin());
 }
@@ -130,12 +174,11 @@ void report_collision_limit(CaptureDocument& capture, const FlowState& state,
     existing->count = existing->count.value_or(0U) + 1U;
     return;
   }
-  if (capture.diagnostics.size() < kMaxDiagnostics) {
-    capture.diagnostics.push_back(
-        {"warning", "TCP_RETRANSMISSION_EVIDENCE_LIMIT",
-         "TCP retransmission comparison stopped for an ambiguous payload group after 8 candidates",
-         state.flow.id, std::nullopt, packetNumber, 1U});
-  }
+  add_diagnostic(
+      capture,
+      {"warning", "TCP_RETRANSMISSION_EVIDENCE_LIMIT",
+       "TCP retransmission comparison stopped for an ambiguous payload group after 8 candidates",
+       state.flow.id, std::nullopt, packetNumber, 1U});
 }
 
 std::vector<std::size_t> boundary_evidence(const FlowState& state) {
@@ -162,6 +205,8 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
   std::optional<std::size_t> firstHandshakePacket;
   std::optional<std::size_t> firstResetPacket;
   std::map<SegmentKey, std::vector<SegmentEvidence>> segments;
+  std::map<DirectionEpochKey, RangeState> ranges;
+  std::vector<PendingRetransmission> pendingRetransmissions;
   DirectionSequenceState clientSequenceState;
   DirectionSequenceState serverSequenceState;
 
@@ -228,6 +273,7 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
     if (tcp.payloadComplete && sequenceSpan > 0U && sequenceSpan < kSerialHalfSpace) {
       auto& direction = fromClient ? clientSequenceState : serverSequenceState;
       const auto epoch = sequence_epoch(direction, tcp.sequence, sequenceSpan);
+      const DirectionEpochKey directionEpoch{fromClient, epoch};
       const SegmentKey key{fromClient, tcp.sequence, static_cast<std::size_t>(sequenceSpan),
                            syn,        fin,          payload_fingerprint(tcp.payload)};
       auto& candidates = segments[key];
@@ -235,13 +281,24 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
         return value.sequenceEpoch == epoch && same_payload(value.payload, tcp.payload);
       });
       if (prior != candidates.end()) {
-        add_observation(capture, "tcp-retransmission-candidate",
-                        "TCP segment appears to resend bytes already seen.",
-                        {prior->packetNumber, parsed->packet.number});
+        pendingRetransmissions.push_back(
+            {directionEpoch, prior->packetNumber, parsed->packet.number});
       } else if (candidates.size() < kMaxPayloadHashCollisions) {
+        add_distinct_range(ranges[directionEpoch], tcp.sequence, sequenceSpan);
         candidates.push_back({tcp.payload, parsed->packet.number, epoch});
       } else {
         report_collision_limit(capture, state, parsed->packet.number);
+      }
+    }
+  }
+
+  if (!state.ambiguousReuse) {
+    for (const auto& pending : pendingRetransmissions) {
+      const auto range = ranges.find(pending.directionEpoch);
+      if (range != ranges.end() && !range->second.ambiguous) {
+        add_observation(capture, "tcp-retransmission-candidate",
+                        "TCP segment appears to resend bytes already seen.",
+                        {pending.priorPacketNumber, pending.packetNumber});
       }
     }
   }
@@ -334,13 +391,11 @@ void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets) {
     if (startsTcp && state.roleSetBySyn && state.initialSynSequence &&
         tcp.sequence != *state.initialSynSequence && !state.ambiguousReuse) {
       state.ambiguousReuse = true;
-      if (capture.diagnostics.size() < kMaxDiagnostics) {
-        capture.diagnostics.push_back(
-            {"warning", "TCP_CONNECTION_REUSE_AMBIGUOUS",
-             "A new SYN used a different initial sequence before an observed close; packets "
-             "remain in one mid-stream flow",
-             state.flow.id, std::nullopt, parsed.packet.number, 1U});
-      }
+      add_diagnostic(capture,
+                     {"warning", "TCP_CONNECTION_REUSE_AMBIGUOUS",
+                      "A new SYN used a different initial sequence before an observed close; "
+                      "packets remain in one mid-stream flow",
+                      state.flow.id, std::nullopt, parsed.packet.number, 1U});
     } else if (startsTcp && !state.roleSetBySyn) {
       if (source != state.flow.client.address || sourcePort != state.flow.client.port) {
         std::swap(state.flow.client, state.flow.server);

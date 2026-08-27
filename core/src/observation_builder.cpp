@@ -7,12 +7,36 @@
 
 namespace wirelens::internal {
 
+void add_diagnostic(CaptureDocument& capture, Diagnostic diagnostic) {
+  const auto limit =
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
+        return value.code == "DIAGNOSTIC_LIMIT_REACHED" ||
+               value.code == "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
+      });
+  if (limit != capture.diagnostics.end()) {
+    limit->count = limit->count.value_or(0U) + 1U;
+    return;
+  }
+  if (capture.diagnostics.size() < kMaxDiagnostics - 1U) {
+    capture.diagnostics.push_back(std::move(diagnostic));
+    return;
+  }
+  if (capture.diagnostics.size() < kMaxDiagnostics) {
+    capture.diagnostics.push_back(
+        {"warning", "DIAGNOSTIC_LIMIT_REACHED",
+         "Additional diagnostics were omitted after the 1,024 diagnostic limit", "diagnostics",
+         std::nullopt, std::nullopt, 1U});
+  }
+}
+
 void add_observation(CaptureDocument& capture, std::string type, std::string message,
                      std::vector<std::size_t> packetNumbers) {
   if (capture.observations.size() >= kMaxObservations) {
     const auto existing =
-        std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
-                     [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
+        std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
+          return value.code == "OBSERVATION_LIMIT_REACHED" ||
+                 value.code == "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
+        });
     if (existing != capture.diagnostics.end()) {
       existing->count = existing->count.value_or(0U) + 1U;
     } else if (capture.diagnostics.size() < kMaxDiagnostics) {
@@ -21,14 +45,16 @@ void add_observation(CaptureDocument& capture, std::string type, std::string mes
            "Additional observations were omitted after the 1,024 observation limit", "observations",
            std::nullopt, std::nullopt, 1U});
     } else {
-      capture.diagnostics.back() = {
-          "warning",
-          "OBSERVATION_LIMIT_REACHED",
-          "Additional observations were omitted after the 1,024 observation limit",
-          "observations",
-          std::nullopt,
-          std::nullopt,
-          1U};
+      const auto diagnosticLimit =
+          std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
+                       [](const auto& value) { return value.code == "DIAGNOSTIC_LIMIT_REACHED"; });
+      if (diagnosticLimit != capture.diagnostics.end()) {
+        diagnosticLimit->code = "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
+        diagnosticLimit->message =
+            "Additional diagnostics and observations were omitted after their 1,024 limits";
+        diagnosticLimit->context = "diagnostics,observations";
+        diagnosticLimit->count = diagnosticLimit->count.value_or(0U) + 1U;
+      }
     }
     return;
   }

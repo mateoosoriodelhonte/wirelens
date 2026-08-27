@@ -112,6 +112,12 @@ TEST_CASE("ambiguous active TCP tuple reuse stays in one limited mid stream flow
   REQUIRE(diagnostic != capture.diagnostics.end());
   REQUIRE(diagnostic->packetNumber == 2);
   REQUIRE(observation(capture, "tcp-connection-without-close") != nullptr);
+  REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
+
+  const auto repeatedAfterAmbiguity =
+      parse({{true, 1000, 0, 0x02}, {true, 9000, 0, 0x02}, {true, 1000, 0, 0x02}});
+  REQUIRE(repeatedAfterAmbiguity.flows.front().midStream);
+  REQUIRE(observation(repeatedAfterAmbiguity, "tcp-retransmission-candidate") == nullptr);
 
   const auto repeatedSyn = parse({{true, 1000, 0, 0x02}, {true, 1000, 0, 0x02}});
   REQUIRE_FALSE(repeatedSyn.flows.front().midStream);
@@ -174,6 +180,12 @@ TEST_CASE(
                                 {true, 110, 0, 0x10, wirelens_test::byte_payload("abcd")}});
     REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
   }
+  SECTION("partial overlap before an exact repeat") {
+    const auto capture = parse({{true, 100, 0, 0x10, wirelens_test::byte_payload("abcd")},
+                                {true, 102, 0, 0x10, wirelens_test::byte_payload("cdxx")},
+                                {true, 100, 0, 0x10, wirelens_test::byte_payload("abcd")}});
+    REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
+  }
   SECTION("changed bytes and direction") {
     const auto capture = parse({{true, 100, 0, 0x10, wirelens_test::byte_payload("abcd")},
                                 {true, 100, 0, 0x10, wirelens_test::byte_payload("abce")},
@@ -228,9 +240,14 @@ TEST_CASE("TCP observation limit remains visible when the diagnostic limit is al
   const auto capture = parse(packets);
   REQUIRE(capture.diagnostics.size() == wirelens::kMaxDiagnostics);
   const auto diagnostic =
-      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
-                   [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
+        return value.code == "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
+      });
   REQUIRE(diagnostic != capture.diagnostics.end());
+  REQUIRE(
+      std::count_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
+        return value.code == "TCP_CONNECTION_REUSE_AMBIGUOUS";
+      }) == wirelens::kMaxDiagnostics - 1U);
   REQUIRE(diagnostic->count.has_value());
   REQUIRE(*diagnostic->count > 0U);
 }

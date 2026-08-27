@@ -114,13 +114,13 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
                                   packet.tcp, packet.udp, packet.dns);
     if (packet.tcp.valid && *captured < *original)
       packet.tcp.payloadComplete = false;
-    if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+    if (protocolDiagnostic) {
       protocolDiagnostic->packetNumber = number;
-      capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+      internal::add_diagnostic(capture, std::move(*protocolDiagnostic));
     }
-    if (packet.dns.diagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+    if (packet.dns.diagnostic) {
       packet.dns.diagnostic->packetNumber = number;
-      capture.diagnostics.push_back(std::move(*packet.dns.diagnostic));
+      internal::add_diagnostic(capture, std::move(*packet.dns.diagnostic));
     }
     packet.packet.summary =
         packet.tcp.valid

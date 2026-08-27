@@ -80,6 +80,7 @@ void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 void build_dns(CaptureDocument& capture, const std::vector<ParsedPacket>& packets);
 void add_observation(CaptureDocument& capture, std::string type, std::string message,
                      std::vector<std::size_t> packetNumbers);
+void add_diagnostic(CaptureDocument& capture, Diagnostic diagnostic);
 std::string flag_text(std::uint8_t flags);
 
 } // namespace wirelens::internal
