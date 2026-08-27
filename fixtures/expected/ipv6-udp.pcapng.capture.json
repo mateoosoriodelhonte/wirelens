@@ -1,0 +1,233 @@
+{
+  "capture": {
+    "capturedBytes": 62,
+    "durationNs": "0",
+    "endTimestampNs": "1000000000",
+    "format": "pcapng",
+    "interfaces": [
+      {
+        "id": 0,
+        "linkType": 1,
+        "snapLength": 65535,
+        "timestampResolution": "microseconds"
+      }
+    ],
+    "originalBytes": 62,
+    "packetCount": 1,
+    "startTimestampNs": "1000000000",
+    "timestampResolution": "microseconds"
+  },
+  "contractVersion": "2.0.0",
+  "diagnostics": [],
+  "endpoints": [
+    {
+      "address": "2001:db8::1",
+      "addressFamily": "ipv6",
+      "id": "endpoint-1",
+      "port": 53000
+    },
+    {
+      "address": "2001:db8::2",
+      "addressFamily": "ipv6",
+      "id": "endpoint-2",
+      "port": 53
+    }
+  ],
+  "flows": [
+    {
+      "capturedBytes": 62,
+      "clientEndpointId": "endpoint-1",
+      "endTimestampNs": "1000000000",
+      "id": "udp-flow-1",
+      "originalBytes": 62,
+      "packetNumbers": [1],
+      "protocol": "UDP",
+      "serverEndpointId": "endpoint-2",
+      "startTimestampNs": "1000000000"
+    }
+  ],
+  "packets": [
+    {
+      "analysisFlags": [],
+      "capturedLength": 62,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-1",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 76,
+            "length": 62,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 76,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 82,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 88,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "34525"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 90,
+            "length": 48,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 90,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "6"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 94,
+                "length": 2,
+                "packetOffset": 18
+              },
+              "explanationKey": null,
+              "name": "payloadLength",
+              "value": "8"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 96,
+                "length": 1,
+                "packetOffset": 20
+              },
+              "explanationKey": null,
+              "name": "nextHeader",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 97,
+                "length": 1,
+                "packetOffset": 21
+              },
+              "explanationKey": null,
+              "name": "hopLimit",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 98,
+                "length": 16,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "2001:db8::1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 114,
+                "length": 16,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "2001:db8::2"
+            }
+          ],
+          "label": "IPv6",
+          "protocol": "IPV6"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 130,
+            "length": 8,
+            "packetOffset": 54
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 130,
+                "length": 2,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 132,
+                "length": 2,
+                "packetOffset": 56
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 134,
+                "length": 2,
+                "packetOffset": 58
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "8"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 136,
+                "length": 2,
+                "packetOffset": 60
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        }
+      ],
+      "number": 1,
+      "originalLength": 62,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "1000000000"
+    }
+  ],
+  "schema": "wirelens.capture"
+}

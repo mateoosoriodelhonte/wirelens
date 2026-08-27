@@ -63,6 +63,12 @@ std::string serialize_capture(const CaptureDocument& capture) {
                        {"startTimestampNs", capture.capture.startTimestampNs},
                        {"endTimestampNs", capture.capture.endTimestampNs},
                        {"durationNs", capture.capture.durationNs}};
+  result["capture"]["interfaces"] = json::array();
+  for (const auto& interface : capture.capture.interfaces)
+    result["capture"]["interfaces"].push_back({{"id", interface.id},
+                                                 {"linkType", interface.linkType},
+                                                 {"snapLength", interface.snapLength},
+                                                 {"timestampResolution", interface.timestampResolution}});
   result["endpoints"] = json::array();
   for (const auto& endpoint : capture.endpoints) {
     result["endpoints"].push_back({{"id", endpoint.id},
@@ -77,6 +83,7 @@ std::string serialize_capture(const CaptureDocument& capture) {
               {"timestampNs", packet.timestampNs},
               {"capturedLength", packet.capturedLength},
               {"originalLength", packet.originalLength},
+              {"interfaceId", packet.interfaceId},
               {"sourceEndpointId", packet.sourceEndpointId},
               {"destinationEndpointId", packet.destinationEndpointId},
               {"summary", packet.summary},
@@ -97,12 +104,14 @@ std::string serialize_capture(const CaptureDocument& capture) {
               {"endTimestampNs", flow.endTimestampNs},
               {"packetNumbers", flow.packetNumbers},
               {"capturedBytes", flow.capturedBytes},
-              {"originalBytes", flow.originalBytes},
-              {"handshake", handshake_text(flow.handshake)},
-              {"termination", flow.termination},
-              {"events", json::array()}};
-    for (const auto& event : flow.events)
-      item["events"].push_back({{"packetNumber", event.packetNumber}, {"label", event.label}});
+              {"originalBytes", flow.originalBytes}};
+    if (flow.protocol == "TCP") {
+      item["handshake"] = handshake_text(flow.handshake);
+      item["termination"] = flow.termination;
+      item["events"] = json::array();
+      for (const auto& event : flow.events)
+        item["events"].push_back({{"packetNumber", event.packetNumber}, {"label", event.label}});
+    }
     result["flows"].push_back(std::move(item));
   }
   result["diagnostics"] = json::array();
@@ -112,21 +121,27 @@ std::string serialize_capture(const CaptureDocument& capture) {
                                      {"message", diagnostic.message},
                                      {"context", diagnostic.context},
                                      {"captureOffset", diagnostic.captureOffset},
-                                     {"packetNumber", diagnostic.packetNumber}});
+                                     {"packetNumber", diagnostic.packetNumber},
+                                     {"count", diagnostic.count}});
   }
   return result.dump(2);
 }
 
 std::string format_summary(const CaptureDocument& capture) {
   std::size_t complete = 0;
-  for (const auto& flow : capture.flows)
+  std::size_t tcpFlows = 0;
+  for (const auto& flow : capture.flows) {
+    if (flow.protocol != "TCP")
+      continue;
+    ++tcpFlows;
     if (flow.handshake == HandshakeState::complete)
       ++complete;
+  }
   const auto duration = std::stoull(capture.capture.durationNs);
   return "Packets: " + std::to_string(capture.packets.size()) + "\n" + "Duration: " +
          (duration % 1000000ULL == 0 ? std::to_string(duration / 1000000ULL) + " ms"
                                      : capture.capture.durationNs + " ns") +
-         "\n" + "TCP connections: " + std::to_string(capture.flows.size()) + "\n" +
+         "\n" + "TCP connections: " + std::to_string(tcpFlows) + "\n" +
          "Handshake: " + (complete > 0 ? "complete" : "incomplete") + "\n";
 }
 

@@ -2,7 +2,7 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Ajv2020 } from '../schema/node_modules/ajv/dist/2020.js';
@@ -160,28 +160,47 @@ async function runWasm(modulePath, fixture) {
 }
 
 async function main(argv) {
-  if (argv.length < 3 || argv.length > 4) {
+  if (argv.length < 2 || argv.length > 4) {
     throw new Error(
-      'Usage: check-contract-parity.mjs <native-cli> <fixture> <wasm-module> [golden]',
+      'Usage: check-contract-parity.mjs <native-cli> <wasm-module> | <native-cli> <fixture> <wasm-module> [golden]',
     );
   }
-  const [nativeCli, fixture, wasmModule, goldenPath] = argv.map((value) =>
-    isAbsolute(value) ? value : resolve(repoRoot, value),
-  );
-  const native = validateDocument(await runNative(nativeCli, fixture), 'Native document');
-  const wasm = validateDocument(await runWasm(wasmModule, fixture), 'WebAssembly document');
-  compareCaptureDocuments(native, wasm);
-  if (goldenPath) {
-    const golden = validateDocument(
-      JSON.parse(await readFile(goldenPath, 'utf8')),
-      'Golden document',
+  const resolveArg = (value) => (isAbsolute(value) ? value : resolve(repoRoot, value));
+  const nativeCli = resolveArg(argv[0]);
+  const fixture = argv.length >= 3 ? resolveArg(argv[1]) : null;
+  const wasmModule = resolveArg(argv.length >= 3 ? argv[2] : argv[1]);
+  const goldenPath = argv.length === 4 ? resolveArg(argv[3]) : null;
+  const cases = fixture
+    ? [[fixture, goldenPath]]
+    : (await readdir(resolve(repoRoot, 'fixtures/generated')))
+        .filter((name) => /\.(pcap|pcapng)$/u.test(name))
+        .sort()
+        .map((name) => [
+          resolve(repoRoot, 'fixtures/generated', name),
+          resolve(repoRoot, 'fixtures/expected', `${name}.capture.json`),
+        ]);
+  for (const [capturePath, expectedPath] of cases) {
+    const native = validateDocument(
+      await runNative(nativeCli, capturePath),
+      `Native document (${capturePath})`,
     );
-    compareCaptureDocuments(native, golden);
+    const wasm = validateDocument(
+      await runWasm(wasmModule, capturePath),
+      `WebAssembly document (${capturePath})`,
+    );
+    compareCaptureDocuments(native, wasm);
+    if (expectedPath) {
+      const golden = validateDocument(
+        JSON.parse(await readFile(expectedPath, 'utf8')),
+        `Golden document (${expectedPath})`,
+      );
+      compareCaptureDocuments(native, golden);
+    }
   }
   process.stdout.write(
-    goldenPath
+    fixture || goldenPath
       ? 'Contract parity: native, WebAssembly, and golden documents match.\n'
-      : 'Contract parity: native and WebAssembly documents match.\n',
+      : 'Contract parity: native, WebAssembly, and all fixture goldens match.\n',
   );
 }
 

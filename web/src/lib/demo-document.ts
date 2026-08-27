@@ -26,6 +26,7 @@ const packets: Packet[] = [
     timestampNs: '1000000000',
     capturedLength: 54,
     originalLength: 54,
+    interfaceId: 0,
     sourceEndpointId: clientId,
     destinationEndpointId: serverId,
     flowId,
@@ -51,6 +52,7 @@ const packets: Packet[] = [
     timestampNs: '1010000000',
     capturedLength: 54,
     originalLength: 54,
+    interfaceId: 0,
     sourceEndpointId: serverId,
     destinationEndpointId: clientId,
     flowId,
@@ -80,6 +82,7 @@ const packets: Packet[] = [
     timestampNs: '1020000000',
     capturedLength: 54,
     originalLength: 54,
+    interfaceId: 0,
     sourceEndpointId: clientId,
     destinationEndpointId: serverId,
     flowId,
@@ -107,7 +110,7 @@ const packets: Packet[] = [
 
 export const demoDocument: CaptureDocument = {
   schema: 'wirelens.capture',
-  contractVersion: '1.0.0',
+  contractVersion: '2.0.0',
   capture: {
     format: 'pcap',
     timestampResolution: 'microseconds',
@@ -117,6 +120,7 @@ export const demoDocument: CaptureDocument = {
     startTimestampNs: '1000000000',
     endTimestampNs: '1020000000',
     durationNs: '20000000',
+    interfaces: [{ id: 0, linkType: 1, snapLength: 0, timestampResolution: 'microseconds' }],
   },
   endpoints: [
     { id: clientId, address: client, port: 51515, addressFamily: 'ipv4' },

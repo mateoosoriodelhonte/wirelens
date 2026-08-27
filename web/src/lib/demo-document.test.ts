@@ -26,6 +26,7 @@ describe('demoDocument contract shape', () => {
       'destinationEndpointId',
       'flowId',
       'id',
+      'interfaceId',
       'layers',
       'number',
       'originalLength',
@@ -60,6 +61,7 @@ describe('demoDocument contract shape', () => {
       'startTimestampNs',
       'termination',
     ]);
-    expect(keys(demoDocument.flows[0].events[0])).toEqual(['label', 'packetNumber']);
+    const tcpFlow = demoDocument.flows.find((flow) => flow.protocol === 'TCP');
+    expect(tcpFlow && keys(tcpFlow.events[0])).toEqual(['label', 'packetNumber']);
   });
 });

@@ -8,21 +8,22 @@ export interface ByteRange {
 
 export interface CaptureDocument {
   schema: 'wirelens.capture';
-  contractVersion: '1.0.0';
+  contractVersion: '2.0.0';
   capture: {
-    format: 'pcap';
-    timestampResolution: 'microseconds' | 'nanoseconds';
+    format: 'pcap' | 'pcapng';
+    timestampResolution: 'microseconds' | 'nanoseconds' | 'binary' | 'custom' | 'mixed';
     packetCount: number;
     capturedBytes: number;
     originalBytes: number;
     startTimestampNs: DecimalString | null;
     endTimestampNs: DecimalString | null;
     durationNs: DecimalString;
+    interfaces: CaptureInterface[];
     [key: string]: unknown;
   };
   endpoints: Endpoint[];
   packets: Packet[];
-  flows: TcpFlow[];
+  flows: Array<TcpFlow | UdpFlow>;
   diagnostics: ParseDiagnostic[];
   [key: string]: unknown;
 }
@@ -38,10 +39,35 @@ export interface ParseError {
     | 'TRUNCATED_PACKET_HEADER'
     | 'INVALID_PACKET_LENGTH'
     | 'INVALID_TIMESTAMP'
-    | 'TRUNCATED_PACKET_DATA';
+    | 'TRUNCATED_PACKET_DATA'
+    | 'TRUNCATED_PCAPNG_BLOCK'
+    | 'TRUNCATED_PCAPNG_SECTION'
+    | 'INVALID_PCAPNG_BYTE_ORDER'
+    | 'INVALID_PCAPNG_BLOCK_LENGTH'
+    | 'MISMATCHED_PCAPNG_BLOCK_LENGTH'
+    | 'UNSUPPORTED_PCAPNG_VERSION'
+    | 'INVALID_PCAPNG_SNAPLEN'
+    | 'TRUNCATED_PCAPNG_OPTION'
+    | 'INVALID_PCAPNG_OPTION_LENGTH'
+    | 'MISSING_PCAPNG_OPTION_END'
+    | 'TRUNCATED_PCAPNG_INTERFACE'
+    | 'TRUNCATED_PCAPNG_PACKET'
+    | 'INVALID_PCAPNG_INTERFACE'
+    | 'INVALID_PCAPNG_PACKET_LENGTH'
+    | 'PCAPNG_BLOCK_LIMIT_EXCEEDED'
+    | 'PCAPNG_SECTION_REQUIRED'
+    | 'PCAPNG_PACKET_EXCEEDS_SNAPLEN';
   message: string;
   captureOffset: number | null;
   packetNumber: number | null;
+}
+
+export interface CaptureInterface {
+  id: number;
+  linkType: number;
+  snapLength: number;
+  timestampResolution: 'microseconds' | 'nanoseconds' | 'binary' | 'custom';
+  [key: string]: unknown;
 }
 
 export interface Endpoint {
@@ -78,6 +104,7 @@ export interface Packet {
   timestampNs: DecimalString;
   capturedLength: number;
   originalLength: number;
+  interfaceId: number | null;
   sourceEndpointId: string | null;
   destinationEndpointId: string | null;
   summary: string;
@@ -109,6 +136,19 @@ export interface TcpFlow {
   [key: string]: unknown;
 }
 
+export interface UdpFlow {
+  id: string;
+  protocol: 'UDP';
+  clientEndpointId: string;
+  serverEndpointId: string;
+  startTimestampNs: DecimalString | null;
+  endTimestampNs: DecimalString | null;
+  packetNumbers: number[];
+  capturedBytes: number;
+  originalBytes: number;
+  [key: string]: unknown;
+}
+
 export interface ParseDiagnostic {
   severity: 'info' | 'warning' | 'error';
   code: string;
@@ -116,5 +156,6 @@ export interface ParseDiagnostic {
   context: string;
   captureOffset: number | null;
   packetNumber: number | null;
+  count: number | null;
   [key: string]: unknown;
 }

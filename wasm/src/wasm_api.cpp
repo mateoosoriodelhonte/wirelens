@@ -40,42 +40,18 @@ struct Result {
       : input(std::move(ownedInput)), inputSize(size), parsed(std::move(parsedResult)) {}
 };
 
-bool is_little_endian_magic(const std::byte* bytes) noexcept {
-  const auto first = std::to_integer<unsigned char>(bytes[0]);
-  const auto second = std::to_integer<unsigned char>(bytes[1]);
-  const auto third = std::to_integer<unsigned char>(bytes[2]);
-  const auto fourth = std::to_integer<unsigned char>(bytes[3]);
-  return (first == 0xd4U && second == 0xc3U && third == 0xb2U && fourth == 0xa1U) ||
-         (first == 0x4dU && second == 0x3cU && third == 0xb2U && fourth == 0xa1U);
-}
-
-std::uint32_t read_u32(const std::byte* bytes, const bool little) noexcept {
-  const auto b0 = std::to_integer<std::uint32_t>(bytes[0]);
-  const auto b1 = std::to_integer<std::uint32_t>(bytes[1]);
-  const auto b2 = std::to_integer<std::uint32_t>(bytes[2]);
-  const auto b3 = std::to_integer<std::uint32_t>(bytes[3]);
-  if (little)
-    return b0 | (b1 << 8U) | (b2 << 16U) | (b3 << 24U);
-  return (b0 << 24U) | (b1 << 16U) | (b2 << 8U) | b3;
-}
-
 std::vector<PacketRange> packet_ranges(const Result& result) {
-  if (!std::holds_alternative<wirelens::CaptureDocument>(result.parsed) || result.inputSize < 24U)
+  if (!std::holds_alternative<wirelens::CaptureDocument>(result.parsed))
     return {};
-  const auto* bytes = result.input.get();
-  const bool little = is_little_endian_magic(bytes);
   std::vector<PacketRange> ranges;
-  const auto& packets = std::get<wirelens::CaptureDocument>(result.parsed).packets;
-  ranges.reserve(packets.size());
-  std::size_t offset = 24U;
-  for (std::size_t index = 0; index < packets.size(); ++index) {
-    if (result.inputSize - offset < 16U)
+  const auto& document = std::get<wirelens::CaptureDocument>(result.parsed);
+  if (document.packetSourceRanges.size() != document.packets.size())
+    return {};
+  ranges.reserve(document.packetSourceRanges.size());
+  for (const auto& source : document.packetSourceRanges) {
+    if (source.captureOffset > result.inputSize || source.length > result.inputSize - source.captureOffset)
       return {};
-    const auto captured = static_cast<std::size_t>(read_u32(bytes + offset + 8U, little));
-    if (captured > result.inputSize - offset - 16U)
-      return {};
-    ranges.push_back({offset + 16U, captured});
-    offset += 16U + captured;
+    ranges.push_back({source.captureOffset, source.length});
   }
   return ranges;
 }
@@ -311,6 +287,8 @@ const uint8_t* wirelens_packet_data(const uint32_t handle, const size_t packet_i
     if (result == nullptr || packet_index >= result->packetRanges.size())
       return nullptr;
     const auto range = result->packetRanges[packet_index];
+    if (range.offset > result->inputSize || range.size > result->inputSize - range.offset)
+      return nullptr;
     return reinterpret_cast<const uint8_t*>(result->input.get() + range.offset);
   });
 }
@@ -319,7 +297,10 @@ size_t wirelens_packet_size(const uint32_t handle, const size_t packet_index) no
   return registry().with(handle, [packet_index](const Result* result) -> size_t {
     if (result == nullptr || packet_index >= result->packetRanges.size())
       return 0;
-    return result->packetRanges[packet_index].size;
+    const auto range = result->packetRanges[packet_index];
+    if (range.offset > result->inputSize || range.size > result->inputSize - range.offset)
+      return 0;
+    return range.size;
   });
 }
 

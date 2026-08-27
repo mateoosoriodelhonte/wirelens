@@ -87,6 +87,15 @@ describe('ParserClient', () => {
     expect(workerFactory).not.toHaveBeenCalled();
   });
 
+  it('accepts a PCAPNG extension before starting the worker', async () => {
+    const workerFactory = vi.fn(() => new FakeWorker());
+    const client = new ParserClient({ workerFactory });
+    const promise = client.parse(validFile('capture.pcapng'));
+    await vi.waitFor(() => expect(workerFactory).toHaveBeenCalledTimes(1));
+    await client.dispose();
+    await expect(promise).rejects.toBeInstanceOf(ParseCancelledError);
+  });
+
   it('rejects an oversized file before reading it or creating a worker', async () => {
     const arrayBuffer = vi.fn();
     const file = Object.assign(validFile('capture.pcap', 64 * 1024 * 1024 + 1), { arrayBuffer });
@@ -130,6 +139,27 @@ describe('ParserClient', () => {
     await expect(parse).rejects.toMatchObject({ code: 'TRUNCATED_GLOBAL_HEADER' });
     expect(client.pendingRequestCount).toBe(0);
     await expect(client.getPacketBytes(0)).rejects.toThrow('No capture is open');
+    await client.dispose();
+  });
+
+  it('accepts the Phase 2 PCAPNG limit errors from the worker', async () => {
+    const worker = new FakeWorker();
+    const client = new ParserClient({ workerFactory: () => worker });
+    const parse = client.parse(validFile('capture.pcapng'));
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(1));
+    const requestId = (worker.messages[0].message as Extract<WorkerRequest, { type: 'parse' }>)
+      .requestId;
+    worker.respond({
+      type: 'failed',
+      requestId,
+      error: {
+        code: 'MISSING_PCAPNG_OPTION_END',
+        message: 'missing terminator',
+        captureOffset: 1,
+        packetNumber: null,
+      },
+    });
+    await expect(parse).rejects.toMatchObject({ code: 'MISSING_PCAPNG_OPTION_END' });
     await client.dispose();
   });
 

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Endpoint, TcpFlow } from '../model';
-  let { flows, endpoints, selectedFlowId = '', onSelect }: { flows: TcpFlow[]; endpoints: Endpoint[]; selectedFlowId?: string; onSelect: (id: string) => void } = $props();
+  import type { Endpoint, TcpFlow, UdpFlow } from '../model';
+  type Flow = TcpFlow | UdpFlow;
+  let { flows, endpoints, selectedFlowId = '', onSelect }: { flows: Flow[]; endpoints: Endpoint[]; selectedFlowId?: string; onSelect: (id: string) => void } = $props();
   const endpoint = (id: string) => endpoints.find((item) => item.id === id);
 </script>
 
@@ -8,7 +9,7 @@
   <div class="section-heading"><div><p class="eyebrow">Follow the evidence</p><h2 id="conversation-title">Conversations</h2></div><span class="count">{flows.length}</span></div>
   {#if flows.length}<ul>{#each flows as flow (flow.id)}<li><button class:selected={selectedFlowId === flow.id} aria-pressed={selectedFlowId === flow.id} onclick={() => onSelect(flow.id)}>
     <span class="flow-name"><span>{endpoint(flow.clientEndpointId)?.address}:{endpoint(flow.clientEndpointId)?.port}</span><span class="arrow" aria-hidden="true">→</span><span>{endpoint(flow.serverEndpointId)?.address}:{endpoint(flow.serverEndpointId)?.port}</span></span>
-    <span class="flow-meta"><span>{flow.handshake === 'complete' ? 'Handshake complete' : 'Handshake incomplete'}</span><span>{flow.packetNumbers.length} packets · {flow.capturedBytes} bytes</span></span>
+    <span class="flow-meta"><span>{flow.protocol === 'TCP' ? (flow.handshake === 'complete' ? 'Handshake complete' : 'Handshake incomplete') : 'UDP datagrams'}</span><span>{flow.packetNumbers.length} packets · {flow.capturedBytes} bytes</span></span>
   </button></li>{/each}</ul>{:else}<p class="empty">No conversations were found in this capture.</p>{/if}
 </section>
 

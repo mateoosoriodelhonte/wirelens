@@ -3,12 +3,12 @@
     "capturedBytes": 162,
     "durationNs": "20000000",
     "endTimestampNs": "1020000000",
-    "format": "pcap",
+    "format": "pcapng",
     "interfaces": [
       {
         "id": 0,
         "linkType": 1,
-        "snapLength": 0,
+        "snapLength": 65535,
         "timestampResolution": "microseconds"
       }
     ],
@@ -73,7 +73,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 40,
+            "captureOffset": 76,
             "length": 54,
             "packetOffset": 0
           },
@@ -81,7 +81,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 40,
+                "captureOffset": 76,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -91,7 +91,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 46,
+                "captureOffset": 82,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -101,7 +101,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 52,
+                "captureOffset": 88,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -115,7 +115,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 54,
+            "captureOffset": 90,
             "length": 40,
             "packetOffset": 14
           },
@@ -123,7 +123,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 54,
+                "captureOffset": 90,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -133,7 +133,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 54,
+                "captureOffset": 90,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -143,7 +143,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 56,
+                "captureOffset": 92,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -153,7 +153,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 62,
+                "captureOffset": 98,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -163,7 +163,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 63,
+                "captureOffset": 99,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -173,7 +173,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 66,
+                "captureOffset": 102,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -183,7 +183,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 70,
+                "captureOffset": 106,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -197,7 +197,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 74,
+            "captureOffset": 110,
             "length": 20,
             "packetOffset": 34
           },
@@ -205,7 +205,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 74,
+                "captureOffset": 110,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -215,7 +215,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 76,
+                "captureOffset": 112,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -225,7 +225,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 78,
+                "captureOffset": 114,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -235,7 +235,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 82,
+                "captureOffset": 118,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -245,7 +245,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 86,
+                "captureOffset": 122,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -255,7 +255,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 86,
+                "captureOffset": 122,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -265,7 +265,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 88,
+                "captureOffset": 124,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -294,7 +294,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 110,
+            "captureOffset": 164,
             "length": 54,
             "packetOffset": 0
           },
@@ -302,7 +302,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 110,
+                "captureOffset": 164,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -312,7 +312,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 116,
+                "captureOffset": 170,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -322,7 +322,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 122,
+                "captureOffset": 176,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -336,7 +336,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 124,
+            "captureOffset": 178,
             "length": 40,
             "packetOffset": 14
           },
@@ -344,7 +344,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 124,
+                "captureOffset": 178,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -354,7 +354,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 124,
+                "captureOffset": 178,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -364,7 +364,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 126,
+                "captureOffset": 180,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -374,7 +374,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 132,
+                "captureOffset": 186,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -384,7 +384,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 133,
+                "captureOffset": 187,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -394,7 +394,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 136,
+                "captureOffset": 190,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -404,7 +404,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 140,
+                "captureOffset": 194,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -418,7 +418,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 144,
+            "captureOffset": 198,
             "length": 20,
             "packetOffset": 34
           },
@@ -426,7 +426,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 144,
+                "captureOffset": 198,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -436,7 +436,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 146,
+                "captureOffset": 200,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -446,7 +446,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 148,
+                "captureOffset": 202,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -456,7 +456,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 152,
+                "captureOffset": 206,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -466,7 +466,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 156,
+                "captureOffset": 210,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -476,7 +476,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 156,
+                "captureOffset": 210,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -486,7 +486,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 158,
+                "captureOffset": 212,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -515,7 +515,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 180,
+            "captureOffset": 252,
             "length": 54,
             "packetOffset": 0
           },
@@ -523,7 +523,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 180,
+                "captureOffset": 252,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -533,7 +533,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 186,
+                "captureOffset": 258,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -543,7 +543,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 192,
+                "captureOffset": 264,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -557,7 +557,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 194,
+            "captureOffset": 266,
             "length": 40,
             "packetOffset": 14
           },
@@ -565,7 +565,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 194,
+                "captureOffset": 266,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -575,7 +575,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 194,
+                "captureOffset": 266,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -585,7 +585,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 196,
+                "captureOffset": 268,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -595,7 +595,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 202,
+                "captureOffset": 274,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -605,7 +605,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 203,
+                "captureOffset": 275,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -615,7 +615,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 206,
+                "captureOffset": 278,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -625,7 +625,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 210,
+                "captureOffset": 282,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -639,7 +639,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 214,
+            "captureOffset": 286,
             "length": 20,
             "packetOffset": 34
           },
@@ -647,7 +647,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 214,
+                "captureOffset": 286,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -657,7 +657,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 216,
+                "captureOffset": 288,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -667,7 +667,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 218,
+                "captureOffset": 290,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -677,7 +677,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 222,
+                "captureOffset": 294,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -687,7 +687,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 226,
+                "captureOffset": 298,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -697,7 +697,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 226,
+                "captureOffset": 298,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -707,7 +707,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 228,
+                "captureOffset": 300,
                 "length": 2,
                 "packetOffset": 48
               },
