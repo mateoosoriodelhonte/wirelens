@@ -215,8 +215,12 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
       packet.packet.originalLength = original;
       packet.packet.interfaceId = interfaces[localInterface].info.id;
       packet.sourceRange = {dataOffset, 0, captured};
-      internal::decode_ethernet(bytes.subspan(dataOffset, captured), dataOffset, packet.packet,
-                                packet.tcp, packet.udp);
+      auto protocolDiagnostic = internal::decode_ethernet(
+          bytes.subspan(dataOffset, captured), dataOffset, packet.packet, packet.tcp, packet.udp);
+      if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+        protocolDiagnostic->packetNumber = packetNumber;
+        capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+      }
       packet.packet.summary =
           packet.tcp.valid
               ? internal::flag_text(packet.tcp.flags)

@@ -4,6 +4,32 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
+namespace {
+std::vector<std::byte> build_vlan_capture(const std::size_t tagCount) {
+  const auto frameLength = 14U + tagCount * 4U;
+  std::vector<std::byte> bytes(24U + 16U + frameLength, std::byte{0});
+  bytes[0] = std::byte{0xd4};
+  bytes[1] = std::byte{0xc3};
+  bytes[2] = std::byte{0xb2};
+  bytes[3] = std::byte{0xa1};
+  wirelens_test::put16(bytes, 4, 2);
+  wirelens_test::put16(bytes, 6, 4);
+  wirelens_test::put32le(bytes, 16, 65'535U);
+  wirelens_test::put32le(bytes, 20, 1);
+  wirelens_test::put32le(bytes, 24, 1);
+  wirelens_test::put32le(bytes, 32, static_cast<std::uint32_t>(frameLength));
+  wirelens_test::put32le(bytes, 36, static_cast<std::uint32_t>(frameLength));
+  constexpr std::size_t frame = 40U;
+  wirelens_test::put16be(bytes, frame + 12U, tagCount == 0 ? 0x0806U : 0x8100U);
+  for (std::size_t tag = 0; tag < tagCount; ++tag) {
+    const auto offset = frame + 14U + tag * 4U;
+    wirelens_test::put16be(bytes, offset, static_cast<std::uint16_t>(tag + 1U));
+    wirelens_test::put16be(bytes, offset + 2U, tag + 1U == tagCount ? 0x0806U : 0x8100U);
+  }
+  return bytes;
+}
+} // namespace
+
 TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   const auto result = wirelens::parse_capture(wirelens_test::build_handshake());
   REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
@@ -56,4 +82,25 @@ TEST_CASE("a non-first IPv4 fragment is not decoded as TCP") {
   REQUIRE(capture.packets.at(0).layers.at(1).protocol == "IPV4");
   REQUIRE(capture.flows.size() == 1);
   REQUIRE(capture.flows.at(0).packetNumbers == std::vector<std::size_t>{2, 3});
+}
+
+TEST_CASE("stacked VLAN tags stop at the named nesting limit") {
+  SECTION("the exact boundary is accepted") {
+    const auto result = wirelens::parse_capture(build_vlan_capture(wirelens::kMaxVlanTags));
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+    const auto& capture = std::get<wirelens::CaptureDocument>(result);
+    REQUIRE(capture.diagnostics.empty());
+    REQUIRE(capture.packets.at(0).layers.at(0).fields.size() == 3U + 2U * wirelens::kMaxVlanTags);
+  }
+
+  SECTION("the next nested tag produces one bounded diagnostic") {
+    const auto result = wirelens::parse_capture(build_vlan_capture(wirelens::kMaxVlanTags + 1U));
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+    const auto& capture = std::get<wirelens::CaptureDocument>(result);
+    REQUIRE(capture.packets.at(0).layers.at(0).fields.size() == 3U + 2U * wirelens::kMaxVlanTags);
+    REQUIRE(capture.diagnostics.size() == 1);
+    REQUIRE(capture.diagnostics.at(0).code == "PROTOCOL_NESTING_LIMIT_EXCEEDED");
+    REQUIRE(capture.diagnostics.at(0).context == "ethernet.vlan");
+    REQUIRE(capture.diagnostics.at(0).packetNumber == 1U);
+  }
 }

@@ -109,8 +109,12 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     packet.packet.originalLength = *original;
     packet.packet.interfaceId = 0;
     packet.sourceRange = {offset + 16, 0, *captured};
-    internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
-                              packet.tcp, packet.udp);
+    auto protocolDiagnostic = internal::decode_ethernet(
+        bytes.subspan(offset + 16, *captured), offset + 16, packet.packet, packet.tcp, packet.udp);
+    if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+      protocolDiagnostic->packetNumber = number;
+      capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+    }
     packet.packet.summary =
         packet.tcp.valid
             ? internal::flag_text(packet.tcp.flags)
