@@ -42,8 +42,7 @@ inline std::vector<std::byte> build_handshake() {
   put16(bytes, 6, 4);
   put32le(bytes, 8, 0);
   put32le(bytes, 12, 0);
-  put16(bytes, 16, 0);
-  put16(bytes, 18, 0);
+  put32le(bytes, 16, 65535);
   put32le(bytes, 20, 1);
   constexpr std::uint32_t seqs[] = {1000, 5000, 1001};
   constexpr std::uint32_t acks[] = {0, 1001, 5001};

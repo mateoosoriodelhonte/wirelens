@@ -2,6 +2,7 @@
 #include "wirelens/parser.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
 
 TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   const auto result = wirelens::parse_capture(wirelens_test::build_handshake());
@@ -37,4 +38,22 @@ TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   REQUIRE(packets.at(2).layers.at(2).fields.at(5).value == "ACK");
   REQUIRE(packets.at(2).layers.at(2).fields.at(5).explanationKey == "tcp.ack");
   REQUIRE(packets.at(0).layers.at(2).fields.at(5).explanationKey == "tcp.syn");
+}
+
+TEST_CASE("a non-first IPv4 fragment is not decoded as TCP") {
+  auto bytes = wirelens_test::build_handshake();
+  constexpr std::size_t firstFrameOffset = 24U + 16U;
+  constexpr std::size_t ipv4FlagsAndOffset = firstFrameOffset + 14U + 6U;
+  bytes[ipv4FlagsAndOffset] = std::byte{0x00};
+  bytes[ipv4FlagsAndOffset + 1U] = std::byte{0x01};
+
+  const auto result = wirelens::parse_capture(bytes);
+
+  REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+  const auto& capture = std::get<wirelens::CaptureDocument>(result);
+  REQUIRE(capture.packets.at(0).layers.size() == 2);
+  REQUIRE(capture.packets.at(0).layers.at(0).protocol == "ETHERNET");
+  REQUIRE(capture.packets.at(0).layers.at(1).protocol == "IPV4");
+  REQUIRE(capture.flows.size() == 1);
+  REQUIRE(capture.flows.at(0).packetNumbers == std::vector<std::size_t>{2, 3});
 }
