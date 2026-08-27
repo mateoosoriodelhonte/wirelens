@@ -48,8 +48,9 @@ std::optional<ProtocolLayer> decode_ipv6(std::span<const std::byte> payload,
 std::optional<ProtocolLayer> decode_udp(std::span<const std::byte> payload,
                                         std::size_t captureOffset, std::size_t packetOffset,
                                         UdpFacts& facts);
-void decode_ethernet(std::span<const std::byte> frame, std::size_t captureOffset, Packet& packet,
-                     TcpFacts& tcp, UdpFacts& udp);
+std::optional<Diagnostic> decode_ethernet(std::span<const std::byte> frame,
+                                          std::size_t captureOffset, Packet& packet, TcpFacts& tcp,
+                                          UdpFacts& udp);
 void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 std::string flag_text(std::uint8_t flags);
 
