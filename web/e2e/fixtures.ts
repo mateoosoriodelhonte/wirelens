@@ -7,3 +7,5 @@ export const handshakeFixturePath = resolve(
   e2eDirectory,
   '../../fixtures/generated/tcp-handshake.pcap',
 );
+
+export const dnsFixturePath = resolve(e2eDirectory, '../../fixtures/generated/dns-exchanges.pcap');

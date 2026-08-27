@@ -1,0 +1,4032 @@
+{
+  "capture": {
+    "capturedBytes": 1086,
+    "durationNs": "6070000000",
+    "endTimestampNs": "7070000000",
+    "format": "pcap",
+    "interfaces": [
+      {
+        "id": 0,
+        "linkType": 1,
+        "snapLength": 65535,
+        "timestampResolution": "microseconds"
+      }
+    ],
+    "originalBytes": 1086,
+    "packetCount": 14,
+    "startTimestampNs": "1000000000",
+    "timestampResolution": "microseconds"
+  },
+  "contractVersion": "2.0.0",
+  "diagnostics": [],
+  "dnsExchanges": [
+    {
+      "answers": [
+        {
+          "class": 1,
+          "name": "example.com",
+          "type": 1,
+          "value": "192.0.2.53"
+        }
+      ],
+      "id": "dns-exchange-1",
+      "latencyNs": "10000000",
+      "matched": true,
+      "queryPacketNumber": 1,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "NOERROR",
+      "responsePacketNumber": 2
+    },
+    {
+      "answers": [
+        {
+          "class": 1,
+          "name": "example.com",
+          "type": 28,
+          "value": "2001:db8::35"
+        }
+      ],
+      "id": "dns-exchange-2",
+      "latencyNs": "20000000",
+      "matched": true,
+      "queryPacketNumber": 3,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 28
+      },
+      "responseCode": "NOERROR",
+      "responsePacketNumber": 4
+    },
+    {
+      "answers": [
+        {
+          "class": 1,
+          "name": "example.com",
+          "type": 1,
+          "value": "192.0.2.53"
+        }
+      ],
+      "id": "dns-exchange-3",
+      "latencyNs": "30000000",
+      "matched": true,
+      "queryPacketNumber": 5,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "NOERROR",
+      "responsePacketNumber": 6
+    },
+    {
+      "answers": [
+        {
+          "class": 1,
+          "name": "example.com",
+          "type": 1,
+          "value": "192.0.2.53"
+        }
+      ],
+      "id": "dns-exchange-4",
+      "latencyNs": "40000000",
+      "matched": true,
+      "queryPacketNumber": 7,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "NOERROR",
+      "responsePacketNumber": 8
+    },
+    {
+      "answers": [
+        {
+          "class": 1,
+          "name": "example.com",
+          "type": 1,
+          "value": "192.0.2.53"
+        }
+      ],
+      "id": "dns-exchange-5",
+      "latencyNs": "500000000",
+      "matched": true,
+      "queryPacketNumber": 9,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "NOERROR",
+      "responsePacketNumber": 10
+    },
+    {
+      "answers": [],
+      "id": "dns-exchange-6",
+      "latencyNs": "60000000",
+      "matched": true,
+      "queryPacketNumber": 11,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "NXDOMAIN",
+      "responsePacketNumber": 12
+    },
+    {
+      "answers": [],
+      "id": "dns-exchange-7",
+      "latencyNs": "70000000",
+      "matched": true,
+      "queryPacketNumber": 13,
+      "question": {
+        "class": 1,
+        "name": "example.com",
+        "type": 1
+      },
+      "responseCode": "SERVFAIL",
+      "responsePacketNumber": 14
+    }
+  ],
+  "endpoints": [
+    {
+      "address": "192.0.2.10",
+      "addressFamily": "ipv4",
+      "id": "endpoint-1",
+      "port": 53000
+    },
+    {
+      "address": "198.51.100.53",
+      "addressFamily": "ipv4",
+      "id": "endpoint-2",
+      "port": 53
+    }
+  ],
+  "flows": [
+    {
+      "capturedBytes": 1086,
+      "clientEndpointId": "endpoint-1",
+      "endTimestampNs": "7070000000",
+      "id": "udp-flow-1",
+      "originalBytes": 1086,
+      "packetNumbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+      "protocol": "UDP",
+      "serverEndpointId": "endpoint-2",
+      "startTimestampNs": "1000000000"
+    }
+  ],
+  "observations": [
+    {
+      "id": "observation-1",
+      "limitation": "Only packets in this capture were considered.",
+      "message": "DNS response returned NXDOMAIN",
+      "packetNumbers": [11, 12],
+      "type": "dns-error"
+    },
+    {
+      "id": "observation-2",
+      "limitation": "Only packets in this capture were considered.",
+      "message": "DNS response returned SERVFAIL",
+      "packetNumbers": [13, 14],
+      "type": "dns-error"
+    },
+    {
+      "id": "observation-3",
+      "limitation": "Only packets in this capture were considered.",
+      "message": "DNS response latency met the slow-response rule",
+      "packetNumbers": [9, 10],
+      "type": "slow-dns"
+    }
+  ],
+  "packets": [
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-1",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 40,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 40,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 46,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 52,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 54,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 54,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 54,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 56,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 62,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 63,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 66,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 70,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 74,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 74,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 76,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 78,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 80,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 82,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 82,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16384"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 84,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 84,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 86,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 88,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 94,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 107,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 1,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "1000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 87,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-2",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 127,
+            "length": 87,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 127,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 133,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 139,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 141,
+            "length": 73,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 141,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 141,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 143,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "73"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 149,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 150,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 153,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 157,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 161,
+            "length": 53,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 161,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 163,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 165,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 167,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 169,
+            "length": 45,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 169,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16384"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 171,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 171,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 173,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 175,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 181,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 194,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 2,
+      "originalLength": 87,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "1010000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-3",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 230,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 230,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 236,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 242,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 244,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 244,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 244,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 246,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 252,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 253,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 256,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 260,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 264,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 264,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 266,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 268,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 270,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 272,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 272,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16385"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 274,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 274,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 276,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 278,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 284,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 297,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "28"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 3,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "2000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 99,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-4",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 317,
+            "length": 99,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 317,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 323,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 329,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 331,
+            "length": 85,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 331,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 331,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 333,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "85"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 339,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 340,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 343,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 347,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 351,
+            "length": 65,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 351,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 353,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 355,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "65"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 357,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 359,
+            "length": 57,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 359,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16385"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 361,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 361,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 363,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 365,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 371,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 384,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "28"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 4,
+      "originalLength": 99,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "2020000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-5",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 432,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 432,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 438,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 444,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 446,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 446,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 446,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 448,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 454,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 455,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 458,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 462,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 466,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 466,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 468,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 470,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 472,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 474,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 474,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16386"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 476,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 476,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 478,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 480,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 486,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 499,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 5,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "3000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 87,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-6",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 519,
+            "length": 87,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 519,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 525,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 531,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 533,
+            "length": 73,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 533,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 533,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 535,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "73"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 541,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 542,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 545,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 549,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 553,
+            "length": 53,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 553,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 555,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 557,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 559,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 561,
+            "length": 45,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 561,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16386"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 563,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 563,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 565,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 567,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 573,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 586,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 6,
+      "originalLength": 87,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "3030000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-7",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 622,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 622,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 628,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 634,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 636,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 636,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 636,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 638,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 644,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 645,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 648,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 652,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 656,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 656,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 658,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 660,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 662,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 664,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 664,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16387"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 666,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 666,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 668,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 670,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 676,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 689,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 7,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "4000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 87,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-8",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 709,
+            "length": 87,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 709,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 715,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 721,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 723,
+            "length": 73,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 723,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 723,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 725,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "73"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 731,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 732,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 735,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 739,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 743,
+            "length": 53,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 743,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 745,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 747,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 749,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 751,
+            "length": 45,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 751,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16387"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 753,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 753,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 755,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 757,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 763,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 776,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 8,
+      "originalLength": 87,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "4040000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-9",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 812,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 812,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 818,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 824,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 826,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 826,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 826,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 828,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 834,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 835,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 838,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 842,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 846,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 846,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 848,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 850,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 852,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 854,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 854,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16388"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 856,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 856,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 858,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 860,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 866,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 879,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 9,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "5000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 87,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-10",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 899,
+            "length": 87,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 899,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 905,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 911,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 913,
+            "length": 73,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 913,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 913,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 915,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "73"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 921,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 922,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 925,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 929,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 933,
+            "length": 53,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 933,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 935,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 937,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 939,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 941,
+            "length": 45,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 941,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16388"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 943,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 943,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 945,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 947,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 953,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 966,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 10,
+      "originalLength": 87,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "5500000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-11",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 1002,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1002,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1008,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1014,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1016,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1016,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1016,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1018,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1024,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1025,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1028,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1032,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1036,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1036,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1038,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1040,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1042,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1044,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1044,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16389"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1046,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1046,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1048,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1050,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1056,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1069,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 11,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "6000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-12",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 1089,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1089,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1095,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1101,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1103,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1103,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1103,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1105,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1111,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1112,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1115,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1119,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1123,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1123,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1125,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1127,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1129,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1131,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1131,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16389"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1133,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1133,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "3"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1135,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1137,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1143,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1156,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 12,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "6060000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-2",
+      "flowId": "udp-flow-1",
+      "id": "packet-13",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 1176,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1176,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1182,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1188,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1190,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1190,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1190,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1192,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1198,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1199,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1202,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "192.0.2.10"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1206,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "198.51.100.53"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1210,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1210,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1212,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1214,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1216,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1218,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1218,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16390"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1220,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "query"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1220,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1222,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1224,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1230,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1243,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 13,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-1",
+      "summary": "UDP datagram",
+      "timestampNs": "7000000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 71,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "udp-flow-1",
+      "id": "packet-14",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 1263,
+            "length": 71,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1263,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "00:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1269,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "00:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1275,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1277,
+            "length": 57,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1277,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1277,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1279,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "57"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1285,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1286,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "17"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1289,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1293,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1297,
+            "length": 37,
+            "packetOffset": 34
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1297,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "53"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1299,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "53000"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1301,
+                "length": 2,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "length",
+              "value": "37"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1303,
+                "length": 2,
+                "packetOffset": 40
+              },
+              "explanationKey": null,
+              "name": "checksum",
+              "value": "0"
+            }
+          ],
+          "label": "UDP",
+          "protocol": "UDP"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 1305,
+            "length": 29,
+            "packetOffset": 42
+          },
+          "explanationKey": "dns",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 1305,
+                "length": 2,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "transactionId",
+              "value": "16390"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1307,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "messageType",
+              "value": "response"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1307,
+                "length": 2,
+                "packetOffset": 44
+              },
+              "explanationKey": null,
+              "name": "responseCode",
+              "value": "2"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1309,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "questionCount",
+              "value": "1"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1311,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "answerCount",
+              "value": "0"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1317,
+                "length": 13,
+                "packetOffset": 54
+              },
+              "explanationKey": null,
+              "name": "questionName",
+              "value": "example.com"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 1330,
+                "length": 2,
+                "packetOffset": 67
+              },
+              "explanationKey": null,
+              "name": "questionType",
+              "value": "1"
+            }
+          ],
+          "label": "DNS",
+          "protocol": "DNS"
+        }
+      ],
+      "number": 14,
+      "originalLength": 71,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "UDP datagram",
+      "timestampNs": "7070000000"
+    }
+  ],
+  "schema": "wirelens.capture"
+}

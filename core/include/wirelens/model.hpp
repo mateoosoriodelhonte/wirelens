@@ -97,6 +97,38 @@ struct Flow {
 
 using TcpFlow = Flow;
 
+struct DnsQuestion {
+  std::string name;
+  std::uint16_t type = 0;
+  std::uint16_t classCode = 0;
+};
+
+struct DnsRecord {
+  std::string name;
+  std::uint16_t type = 0;
+  std::uint16_t classCode = 0;
+  std::string value;
+};
+
+struct DnsExchange {
+  std::string id;
+  DnsQuestion question;
+  std::optional<std::size_t> queryPacketNumber;
+  std::optional<std::size_t> responsePacketNumber;
+  std::optional<std::string> responseCode;
+  std::vector<DnsRecord> answers;
+  std::optional<std::string> latencyNs;
+  bool matched = false;
+};
+
+struct Observation {
+  std::string id;
+  std::string type;
+  std::string message;
+  std::vector<std::size_t> packetNumbers;
+  std::string limitation;
+};
+
 struct CaptureInfo {
   std::string format = "pcap";
   std::string timestampResolution = "microseconds";
@@ -126,6 +158,8 @@ struct CaptureDocument {
   std::vector<Endpoint> endpoints;
   std::vector<Packet> packets;
   std::vector<Flow> flows;
+  std::vector<DnsExchange> dnsExchanges;
+  std::vector<Observation> observations;
   std::vector<Diagnostic> diagnostics;
   // Private packet byte locations used by the native/WASM byte bridge. This
   // member is deliberately omitted by serialize_capture().

@@ -3,6 +3,7 @@ add_executable(wirelens_tests
   byte_reader_test.cpp
   pcap_parser_test.cpp
   protocol_parser_test.cpp
+  dns_parser_test.cpp
   flow_builder_test.cpp
   serialization_test.cpp)
 target_link_libraries(wirelens_tests PRIVATE wirelens_core Catch2::Catch2WithMain)

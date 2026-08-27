@@ -215,11 +215,16 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
       packet.packet.originalLength = original;
       packet.packet.interfaceId = interfaces[localInterface].info.id;
       packet.sourceRange = {dataOffset, 0, captured};
-      auto protocolDiagnostic = internal::decode_ethernet(
-          bytes.subspan(dataOffset, captured), dataOffset, packet.packet, packet.tcp, packet.udp);
+      auto protocolDiagnostic =
+          internal::decode_ethernet(bytes.subspan(dataOffset, captured), dataOffset, packet.packet,
+                                    packet.tcp, packet.udp, packet.dns);
       if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
         protocolDiagnostic->packetNumber = packetNumber;
         capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+      }
+      if (packet.dns.diagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+        packet.dns.diagnostic->packetNumber = packetNumber;
+        capture.diagnostics.push_back(std::move(*packet.dns.diagnostic));
       }
       packet.packet.summary =
           packet.tcp.valid
@@ -251,6 +256,7 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
     capture.capture.durationNs = end >= start ? std::to_string(end - start) : "0";
   }
   internal::build_flows(capture, parsed);
+  internal::build_dns(capture, parsed);
   for (const auto& [blockType, count] : unknownBlocks) {
     if (capture.diagnostics.size() >= kMaxDiagnostics)
       break;

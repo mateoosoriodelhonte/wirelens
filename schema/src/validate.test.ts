@@ -19,6 +19,8 @@ describe('validateCaptureDocument', () => {
     endpoints: [],
     packets: [],
     flows: [],
+    dnsExchanges: [],
+    observations: [],
     diagnostics: [],
   });
 
@@ -62,6 +64,83 @@ describe('validateCaptureDocument', () => {
       },
     ];
     expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts DNS exchanges and bounded neutral observations', () => {
+    const value = minimal() as Record<string, any>;
+    value.dnsExchanges = [
+      {
+        id: 'dns-exchange-1',
+        question: { name: 'example.com', type: 1, class: 1 },
+        queryPacketNumber: 1,
+        responsePacketNumber: 2,
+        responseCode: 'NOERROR',
+        answers: [{ name: 'example.com', type: 1, class: 1, value: '192.0.2.53' }],
+        latencyNs: '500000000',
+        matched: true,
+      },
+    ];
+    value.observations = [
+      {
+        id: 'observation-1',
+        type: 'slow-dns',
+        message: 'DNS response latency met the slow-response rule',
+        packetNumbers: [1, 2],
+        limitation: 'Only packets in this capture were considered.',
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts the observation boundary and rejects the next item', () => {
+    const value = minimal() as Record<string, any>;
+    value.observations = Array.from({ length: 1024 }, (_, index) => ({
+      id: `observation-${index + 1}`,
+      type: 'dns-error',
+      message: 'DNS response returned NXDOMAIN',
+      packetNumbers: [1],
+      limitation: 'Only packets in this capture were considered.',
+    }));
+    expect(validateCaptureDocument(value)).toEqual(value);
+    value.observations.push({ ...value.observations[0], id: 'observation-1025' });
+    expect(() => validateCaptureDocument(value)).toThrow(/1024/);
+  });
+
+  it('accepts the DNS root name representation', () => {
+    const value = minimal() as Record<string, any>;
+    value.dnsExchanges = [
+      {
+        id: 'dns-exchange-1',
+        question: { name: '.', type: 1, class: 1 },
+        queryPacketNumber: 1,
+        responsePacketNumber: null,
+        responseCode: null,
+        answers: [],
+        latencyNs: null,
+        matched: false,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts the DNS answer boundary and rejects the next item', () => {
+    const value = minimal() as Record<string, any>;
+    const answer = { name: 'example.com', type: 1, class: 1, value: '192.0.2.53' };
+    value.dnsExchanges = [
+      {
+        id: 'dns-exchange-1',
+        question: { name: 'example.com', type: 1, class: 1 },
+        queryPacketNumber: 1,
+        responsePacketNumber: 2,
+        responseCode: 'NOERROR',
+        answers: Array.from({ length: 1024 }, () => ({ ...answer })),
+        latencyNs: '1',
+        matched: true,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+    value.dnsExchanges[0].answers.push({ ...answer });
+    expect(() => validateCaptureDocument(value)).toThrow(/1024/);
   });
 
   it('requires diagnostic count and accepts a positive aggregate count', () => {

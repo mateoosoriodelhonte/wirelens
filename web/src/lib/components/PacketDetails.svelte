@@ -25,7 +25,7 @@
   <div class="section-heading">
     <div>
       <p class="eyebrow">Packet {packet.number}</p>
-      <h2 id="details-title">Packet details</h2>
+      <h2 id="details-title" tabindex="-1">Packet details</h2>
     </div>
     <span class="protocol-tag">{protocol}</span>
   </div>

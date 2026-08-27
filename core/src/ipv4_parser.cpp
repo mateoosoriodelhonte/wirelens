@@ -30,7 +30,7 @@ std::string address(const std::span<const std::byte> bytes) {
 std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payload,
                                          const std::size_t captureOffset,
                                          const std::size_t packetOffset, TcpFacts& tcp,
-                                         UdpFacts& udp, Packet& packet) {
+                                         UdpFacts& udp, DnsFacts& dns, Packet& packet) {
   if (payload.size() < 20)
     return std::nullopt;
   const auto version = std::to_integer<unsigned>(payload[0]) >> 4U;
@@ -77,6 +77,9 @@ std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payloa
         packet.layers.push_back(*layer);
         udp.source = source;
         udp.destination = destination;
+        if (const auto dnsLayer = decode_dns(transport.subspan(8, udp.payloadLength), captureOffset,
+                                             packetOffset + headerLength + 8, udp, dns))
+          packet.layers.push_back(*dnsLayer);
       }
     }
   }

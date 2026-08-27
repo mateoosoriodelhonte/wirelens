@@ -4,6 +4,7 @@
   import CaptureOverview from '$lib/components/CaptureOverview.svelte';
   import CapturePicker from '$lib/components/CapturePicker.svelte';
   import ConversationList from '$lib/components/ConversationList.svelte';
+  import DnsExchangeList from '$lib/components/DnsExchangeList.svelte';
   import PacketDetails from '$lib/components/PacketDetails.svelte';
   import PacketTable from '$lib/components/PacketTable.svelte';
   import TcpSequence from '$lib/components/TcpSequence.svelte';
@@ -32,6 +33,11 @@
     document?.flows.find((flow) => flow.id === selectedFlowId) ?? document?.flows[0],
   );
   const selectedTcpFlow = $derived(selectedFlow?.protocol === 'TCP' ? selectedFlow : undefined);
+  const dnsObservations = $derived(
+    document?.observations.filter(
+      (observation) => observation.type === 'dns-error' || observation.type === 'slow-dns',
+    ) ?? [],
+  );
 
   onMount(() => {
     isBrowser = true;
@@ -71,6 +77,14 @@
 
   function selectPacket(id: string) {
     captureStore?.selectPacket(id);
+  }
+
+  async function selectEvidencePacket(packetNumber: number) {
+    const packet = document?.packets.find((candidate) => candidate.number === packetNumber);
+    if (!packet) return;
+    selectPacket(packet.id);
+    await tick();
+    globalThis.document?.getElementById('details-title')?.focus();
   }
 </script>
 
@@ -127,7 +141,7 @@
     <nav class="section-nav" aria-label="Capture sections">
       <span>Jump to</span><a href={resolve('/#overview')}>Overview</a><a
         href={resolve('/#conversations')}>Conversations</a
-      ><a href={resolve('/#packets')}>Packets</a>
+      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#packets')}>Packets</a>
     </nav>
   {/if}
   {#if document}
@@ -140,8 +154,19 @@
           {selectedFlowId}
           onSelect={(id) => (selectedFlowId = id)}
         />
-        {#if selectedTcpFlow}<TcpSequence {document} flow={selectedTcpFlow} />{:else if selectedFlow}<section class="udp-note" aria-label="UDP flow"><strong>UDP datagrams</strong><p>This flow has no TCP sequence handshake.</p></section>{/if}
+        {#if selectedTcpFlow}<TcpSequence
+            {document}
+            flow={selectedTcpFlow}
+          />{:else if selectedFlow}<section class="udp-note" aria-label="UDP flow">
+            <strong>UDP datagrams</strong>
+            <p>This flow has no TCP sequence handshake.</p>
+          </section>{/if}
       </div>
+      <DnsExchangeList
+        exchanges={document.dnsExchanges}
+        observations={dnsObservations}
+        onSelectPacket={selectEvidencePacket}
+      />
       <div class="split packet-split">
         <PacketTable
           {document}

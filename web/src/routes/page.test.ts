@@ -57,11 +57,42 @@ describe('capture page', () => {
     );
     expect(screen.getByText('3 packets')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /conversations/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /dns exchanges/i })).toBeInTheDocument();
     expect(screen.getByText('SYN + ACK')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ethernet/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ipv4/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /tcp/i })).toBeInTheDocument();
     expect(screen.getByRole('main')).not.toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('follows DNS evidence to the selected packet details', async () => {
+    const dnsDocument = {
+      ...demoDocument,
+      dnsExchanges: [
+        {
+          id: 'dns-exchange-1',
+          question: { name: 'example.com', type: 1, class: 1 },
+          queryPacketNumber: 1,
+          responsePacketNumber: 2,
+          responseCode: 'NOERROR',
+          answers: [{ name: 'example.com', type: 1, class: 1, value: '192.0.2.53' }],
+          latencyNs: '10000000',
+          matched: true,
+        },
+      ],
+      observations: [],
+    };
+    render(Page);
+    instances[0].parse.mockResolvedValue(dnsDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('dns.pcap')] },
+    });
+    const evidence = await screen.findByRole('button', {
+      name: 'View response packet 2 for example.com',
+    });
+    await fireEvent.click(evidence);
+    expect(screen.getByRole('heading', { name: 'Packet details' })).toHaveFocus();
+    expect(screen.getByText('Packet 2', { exact: true })).toBeVisible();
   });
 
   it('shows a typed parser error in an alert and disposes on teardown', async () => {

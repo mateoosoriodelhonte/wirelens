@@ -69,6 +69,7 @@ describe('checked-in Phase 2 fixtures', () => {
       .filter((name) => /\.(pcap|pcapng)$/u.test(name))
       .sort();
     expect(generated).toEqual([
+      'dns-exchanges.pcap',
       'ipv6-udp.pcapng',
       'tcp-handshake-big-endian.pcap',
       'tcp-handshake-nanoseconds.pcap',

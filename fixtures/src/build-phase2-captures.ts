@@ -133,6 +133,95 @@ function ipv6UdpPcapng(): Uint8Array {
   u16(result, frame + 58, 8, false);
   return result;
 }
+
+function dnsName(): number[] {
+  return [7, ...Array.from('example').map((value) => value.charCodeAt(0)), 3, 99, 111, 109, 0];
+}
+
+function dnsMessage(
+  response: boolean,
+  id: number,
+  responseCode: number,
+  answerType: number,
+): Uint8Array {
+  const name = dnsName();
+  const answerLength = answerType === 1 ? 4 : answerType === 28 ? 16 : 0;
+  const result = new Uint8Array(
+    12 + name.length + 4 + (response && answerType ? 12 + answerLength : 0),
+  );
+  u16(result, 0, id, false);
+  u16(result, 2, (response ? 0x8000 : 0) | responseCode, false);
+  u16(result, 4, 1, false);
+  u16(result, 6, response && answerType ? 1 : 0, false);
+  result.set(name, 12);
+  u16(result, 12 + name.length, answerType || 1, false);
+  u16(result, 14 + name.length, 1, false);
+  if (response && answerType) {
+    const answer = 16 + name.length;
+    result[answer] = 0xc0;
+    result[answer + 1] = 0x0c;
+    u16(result, answer + 2, answerType, false);
+    u16(result, answer + 4, 1, false);
+    u32(result, answer + 6, 60, false);
+    u16(result, answer + 10, answerLength, false);
+    if (answerType === 1) result.set([192, 0, 2, 53], answer + 12);
+    else result.set([0x20, 0x01, 0x0d, 0xb8, ...new Array(11).fill(0), 0x35], answer + 12);
+  }
+  return result;
+}
+
+function dnsPcap(): Uint8Array {
+  const latencies = [10_000, 20_000, 30_000, 40_000, 500_000, 60_000, 70_000];
+  const responseCodes = [0, 0, 0, 0, 0, 3, 2];
+  const answerTypes = [1, 28, 1, 1, 1, 0, 0];
+  const messages: Uint8Array[] = [];
+  for (let index = 0; index < latencies.length; index += 1) {
+    const id = 0x4000 + index;
+    messages.push(dnsMessage(false, id, 0, answerTypes[index]));
+    messages.push(dnsMessage(true, id, responseCodes[index], answerTypes[index]));
+  }
+  const frameLength = (message: Uint8Array) => 14 + 20 + 8 + message.length;
+  const total = 24 + messages.reduce((sum, message) => sum + 16 + frameLength(message), 0);
+  const result = new Uint8Array(total);
+  result.set([0xd4, 0xc3, 0xb2, 0xa1], 0);
+  u16(result, 4, 2, true);
+  u16(result, 6, 4, true);
+  u32(result, 16, 65_535, true);
+  u32(result, 20, 1, true);
+  let record = 24;
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    const pair = Math.floor(index / 2);
+    const response = index % 2 === 1;
+    const frame = record + 16;
+    const frameBytes = frameLength(message);
+    u32(result, record, pair + 1, true);
+    u32(result, record + 4, response ? latencies[pair] : 0, true);
+    u32(result, record + 8, frameBytes, true);
+    u32(result, record + 12, frameBytes, true);
+    result.set(
+      response ? [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2] : [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1],
+      frame,
+    );
+    result.set([0x08, 0x00], frame + 12);
+    const ip = frame + 14;
+    result[ip] = 0x45;
+    u16(result, ip + 2, 20 + 8 + message.length, false);
+    result[ip + 8] = 64;
+    result[ip + 9] = 17;
+    result.set(
+      response ? [198, 51, 100, 53, 192, 0, 2, 10] : [192, 0, 2, 10, 198, 51, 100, 53],
+      ip + 12,
+    );
+    const udp = ip + 20;
+    u16(result, udp, response ? 53 : 53_000, false);
+    u16(result, udp + 2, response ? 53_000 : 53, false);
+    u16(result, udp + 4, 8 + message.length, false);
+    result.set(message, udp + 8);
+    record += 16 + frameBytes;
+  }
+  return result;
+}
 await mkdir(generated, { recursive: true });
 await mkdir(manifests, { recursive: true });
 await save('tcp-handshake-big-endian', classicVariant(false, false));
@@ -143,3 +232,13 @@ await writeFile(
   manifestJson('tcp-handshake-pcapng', 'tcp-handshake.pcapng', pcapng(), [1, 2, 3]),
 );
 await savePcapng('ipv6-udp', ipv6UdpPcapng(), [1]);
+await writeFile(resolve(generated, 'dns-exchanges.pcap'), dnsPcap());
+await writeFile(
+  resolve(manifests, 'dns-exchanges.json'),
+  manifestJson(
+    'dns-exchanges',
+    'dns-exchanges.pcap',
+    dnsPcap(),
+    Array.from({ length: 14 }, (_, i) => i + 1),
+  ),
+);

@@ -18,7 +18,18 @@
     "timestampResolution": "microseconds"
   },
   "contractVersion": "2.0.0",
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "captureOffset": 138,
+      "code": "DNS_TRUNCATED_HEADER",
+      "context": "dns",
+      "count": null,
+      "message": "DNS header is truncated",
+      "packetNumber": 1,
+      "severity": "warning"
+    }
+  ],
+  "dnsExchanges": [],
   "endpoints": [
     {
       "address": "2001:db8::1",
@@ -46,6 +57,7 @@
       "startTimestampNs": "1000000000"
     }
   ],
+  "observations": [],
   "packets": [
     {
       "analysisFlags": [],
