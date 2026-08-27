@@ -26,13 +26,19 @@
     },
     "dnsExchanges": {
       "type": "array",
+      "maxItems": 65536,
       "items": { "$ref": "#/$defs/dnsExchange" }
     },
     "observations": {
       "type": "array",
+      "maxItems": 1024,
       "items": { "$ref": "#/$defs/observation" }
     },
-    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/diagnostic" }
+    }
   },
   "$defs": {
     "decimalString": {

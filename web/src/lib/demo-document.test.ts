@@ -9,13 +9,15 @@ describe('demoDocument contract shape', () => {
     expect(validateCaptureDocument(demoDocument)).toBe(demoDocument);
   });
 
-  it('contains only the transport fields defined by the Task 2 contract', () => {
+  it('contains only the fields defined by the normalized contract', () => {
     expect(keys(demoDocument)).toEqual([
       'capture',
       'contractVersion',
       'diagnostics',
+      'dnsExchanges',
       'endpoints',
       'flows',
+      'observations',
       'packets',
       'schema',
     ]);

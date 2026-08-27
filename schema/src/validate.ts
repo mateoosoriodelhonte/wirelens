@@ -21,7 +21,7 @@ export function validateCaptureDocument(value: unknown): CaptureDocument {
     const errors = validate.errors ?? [];
     const versionError = errors.find((error) => error.instancePath === '/contractVersion');
     const message = versionError
-      ? 'Invalid contractVersion: expected WireLens contract version 1.0.0'
+      ? 'Invalid contractVersion: expected WireLens contract version 2.0.0'
       : `Invalid capture document: ${ajv.errorsText(errors)}`;
     throw new ContractValidationError(message, errors);
   }

@@ -5,7 +5,9 @@
 
 #include <array>
 #include <cstdint>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,6 +40,17 @@ std::optional<std::uint16_t> u16_at(const std::span<const std::byte> bytes,
     return std::nullopt;
   ByteReader reader(bytes.subspan(offset, 2));
   return reader.read_u16_be();
+}
+
+void append_safe_octet(std::string& text, const std::uint8_t value) {
+  if (value >= 0x21U && value <= 0x7eU && value != '.' && value != '\\') {
+    text.push_back(static_cast<char>(value));
+    return;
+  }
+  text.push_back('\\');
+  text.push_back(static_cast<char>('0' + value / 100U));
+  text.push_back(static_cast<char>('0' + (value / 10U) % 10U));
+  text.push_back(static_cast<char>('0' + value % 10U));
 }
 
 struct NameResult {
@@ -84,6 +97,14 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
         error = NameError::invalid;
         return std::nullopt;
       }
+      if (target == cursor) {
+        error = NameError::pointerCycle;
+        return std::nullopt;
+      }
+      if (target < 12U || target > cursor) {
+        error = NameError::invalid;
+        return std::nullopt;
+      }
       if (!jumped)
         next = cursor + 2;
       jumped = true;
@@ -109,7 +130,7 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
     if (*lengthByte == 0) {
       if (!jumped)
         next = cursor;
-      if (wireNameBytes > kMaxDnsNameBytes) {
+      if (wireNameBytes >= kMaxDnsNameBytes) {
         error = NameError::nameLimit;
         return std::nullopt;
       }
@@ -119,7 +140,7 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
           result.push_back('.');
         result += labels[index];
       }
-      return NameResult{std::move(result), next};
+      return NameResult{result.empty() ? "." : std::move(result), next};
     }
     if (*lengthByte > 63U || cursor > bytes.size() || bytes.size() - cursor < *lengthByte) {
       error = NameError::truncated;
@@ -131,21 +152,15 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
       return std::nullopt;
     }
     wireNameBytes += static_cast<std::size_t>(*lengthByte) + 1U;
-    if (wireNameBytes > kMaxDnsNameBytes) {
+    if (wireNameBytes >= kMaxDnsNameBytes) {
       error = NameError::nameLimit;
       return std::nullopt;
     }
     const auto label = bytes.subspan(cursor, *lengthByte);
     std::string text;
     text.reserve(label.size());
-    for (const auto value : label) {
-      const auto character = std::to_integer<std::uint8_t>(value);
-      if (character < 0x21U || character > 0x7eU) {
-        error = NameError::invalid;
-        return std::nullopt;
-      }
-      text.push_back(static_cast<char>(character));
-    }
+    for (const auto value : label)
+      append_safe_octet(text, std::to_integer<std::uint8_t>(value));
     labels.push_back(std::move(text));
     cursor += *lengthByte;
   }
@@ -195,25 +210,18 @@ std::string ipv6(const std::span<const std::byte> bytes) {
     bestStart = 8;
     bestLength = 0;
   }
-  std::string result;
+  std::ostringstream result;
   for (std::size_t index = 0; index < 8; ++index) {
     if (index == bestStart) {
-      result += "::";
+      result << "::";
       index += bestLength - 1U;
       continue;
     }
     if (index != 0 && index != bestStart + bestLength)
-      result.push_back(':');
-    constexpr char digits[] = "0123456789abcdef";
-    result += digits[(words[index] >> 12U) & 0xfU];
-    if (words[index] > 0xfffU)
-      result += digits[(words[index] >> 8U) & 0xfU];
-    if (words[index] > 0xffU)
-      result += digits[(words[index] >> 4U) & 0xfU];
-    if (words[index] > 0xfU)
-      result += digits[words[index] & 0xfU];
+      result << ':';
+    result << std::hex << std::nouppercase << words[index];
   }
-  return result;
+  return result.str();
 }
 
 const char* name_error_code(const NameError value) {
@@ -286,12 +294,17 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
   parsed.transactionId = *id;
   parsed.opcode = static_cast<std::uint8_t>((*flags >> 11U) & 0x0fU);
   parsed.responseCode = static_cast<std::uint8_t>(*flags & 0x0fU);
+  parsed.questionCount = *questions;
   parsed.source = udp.source;
   parsed.destination = udp.destination;
   parsed.sourcePort = udp.sourcePort;
   parsed.destinationPort = udp.destinationPort;
   std::size_t cursor = 12;
+  std::size_t questionNameOffset = 12;
+  std::size_t questionNameLength = 0;
+  std::size_t questionTypeOffset = 12;
   for (std::size_t question = 0; question < *questions; ++question) {
+    const auto nameOffset = cursor;
     NameError nameError = NameError::invalid;
     const auto name = read_name(payload, cursor, nameError);
     if (!name) {
@@ -307,9 +320,18 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
                                    captureOffset, packetOffset + cursor);
       return std::nullopt;
     }
-    if (question == 0)
+    if (question == 0) {
       parsed.question = {name->value, *type, *classCode};
+      questionNameOffset = nameOffset;
+      questionNameLength = name->next - nameOffset;
+      questionTypeOffset = cursor;
+    }
     cursor += 4;
+  }
+  if (*questions != 1U) {
+    parsed.diagnostic = dns_error("DNS_UNSUPPORTED_QUESTION_COUNT",
+                                  "DNS exchange matching requires exactly one question",
+                                  captureOffset, packetOffset + 4U);
   }
   for (std::size_t recordIndex = 0; recordIndex < totalRecords; ++recordIndex) {
     NameError nameError = NameError::invalid;
@@ -346,7 +368,7 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
                                    captureOffset, packetOffset + cursor);
       return std::nullopt;
     }
-    if (*type == 1U || *type == 28U) {
+    if (recordIndex < *answers && *classCode == 1U && (*type == 1U || *type == 28U)) {
       parsed.answers.push_back(
           {name->value, *type, *classCode, *type == 1U ? ipv4(recordData) : ipv6(recordData)});
     }
@@ -363,10 +385,10 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
             packetOffset + 2, 2);
   add_field(layer, "questionCount", std::to_string(*questions), captureOffset, packetOffset + 4, 2);
   add_field(layer, "answerCount", std::to_string(*answers), captureOffset, packetOffset + 6, 2);
-  add_field(layer, "questionName", parsed.question.name, captureOffset, packetOffset + 12,
-            parsed.question.name.empty() ? 1U : parsed.question.name.size());
+  add_field(layer, "questionName", parsed.question.name, captureOffset,
+            packetOffset + questionNameOffset, questionNameLength);
   add_field(layer, "questionType", std::to_string(parsed.question.type), captureOffset,
-            packetOffset + 12, 2);
+            packetOffset + questionTypeOffset, 2);
   facts = std::move(parsed);
   return layer;
 }

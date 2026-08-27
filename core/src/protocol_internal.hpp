@@ -35,6 +35,7 @@ struct DnsFacts {
   std::uint16_t transactionId = 0;
   std::uint8_t opcode = 0;
   std::uint8_t responseCode = 0;
+  std::size_t questionCount = 0;
   DnsQuestion question;
   std::vector<DnsRecord> answers;
   std::string source;

@@ -77,16 +77,8 @@ std::optional<Diagnostic> decode_ethernet(const std::span<const std::byte> frame
     const auto ip = etherType == 0x0800U
                         ? decode_ipv4(payload, captureOffset, networkOffset, tcp, udp, dns, packet)
                         : decode_ipv6(payload, captureOffset, networkOffset, tcp, udp, dns, packet);
-    if (ip) {
-      std::optional<ProtocolLayer> tcp;
-      if (packet.layers.size() > beforeIp) {
-        tcp = std::move(packet.layers.back());
-        packet.layers.pop_back();
-      }
-      packet.layers.push_back(*ip);
-      if (tcp)
-        packet.layers.push_back(std::move(*tcp));
-    }
+    if (ip)
+      packet.layers.insert(packet.layers.begin() + static_cast<std::ptrdiff_t>(beforeIp), *ip);
   }
   return std::nullopt;
 }
