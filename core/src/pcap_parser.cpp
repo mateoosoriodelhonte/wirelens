@@ -30,7 +30,8 @@ bool timestamp(const std::uint32_t seconds, const std::uint32_t fraction,
 
 ParseResult parse_capture(const std::span<const std::byte> bytes) {
   static_assert(static_cast<std::uint64_t>(kMaxPacketCount) *
-                    std::numeric_limits<std::uint32_t>::max() <= 9007199254740991ULL);
+                    std::numeric_limits<std::uint32_t>::max() <=
+                9007199254740991ULL);
   if (bytes.size() > kMaxCaptureBytes)
     return error("FILE_TOO_LARGE", "Capture exceeds the 64 MiB limit");
   if (bytes.size() < 4)
@@ -58,9 +59,8 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
   if (*major != 2 || *minor != 4)
     return error("UNSUPPORTED_VERSION", "Only PCAP version 2.4 is supported", 4);
-  (void)header.skip(4);
+  (void)header.skip(8);
   const auto snapLength = little ? header.read_u32_le() : header.read_u32_be();
-  (void)header.skip(4);
   const auto linkType = little ? header.read_u32_le() : header.read_u32_be();
   if (!snapLength || !linkType)
     return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
@@ -89,8 +89,15 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     if (*captured > *original)
       return error("INVALID_PACKET_LENGTH", "Captured length exceeds original length", offset + 8,
                    number);
+    if (*snapLength != 0 && *captured > *snapLength)
+      return error("PCAP_PACKET_EXCEEDS_SNAPLEN", "PCAP packet exceeds capture snap length",
+                   offset + 8, number);
     if (static_cast<std::size_t>(*captured) > bytes.size() - offset - 16)
       return error("TRUNCATED_PACKET_DATA", "PCAP packet data is truncated", offset + 16, number);
+    const auto fractionLimit = nanoseconds ? 1'000'000'000U : 1'000'000U;
+    if (*fraction >= fractionLimit)
+      return error("INVALID_TIMESTAMP", "PCAP packet timestamp fraction is out of range",
+                   offset + 4, number);
     std::string time;
     if (!timestamp(*sec, *fraction, nanoseconds ? 1ULL : 1000ULL, time))
       return error("INVALID_TIMESTAMP", "Packet timestamp overflows nanoseconds", offset, number);
@@ -104,10 +111,12 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     packet.sourceRange = {offset + 16, 0, *captured};
     internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
                               packet.tcp, packet.udp);
-    packet.packet.summary = packet.tcp.valid ? internal::flag_text(packet.tcp.flags)
-                               : (packet.udp.valid ? "UDP datagram"
-                                                   : (packet.packet.layers.empty() ? "Truncated frame"
-                                                                                   : "Ethernet frame"));
+    packet.packet.summary =
+        packet.tcp.valid
+            ? internal::flag_text(packet.tcp.flags)
+            : (packet.udp.valid
+                   ? "UDP datagram"
+                   : (packet.packet.layers.empty() ? "Truncated frame" : "Ethernet frame"));
     parsed.push_back(std::move(packet));
     capture.packetSourceRanges.push_back({offset + 16, 0, *captured});
     if (!capture.capture.startTimestampNs)
