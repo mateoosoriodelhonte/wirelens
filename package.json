@@ -1,0 +1,22 @@
+{
+  "name": "wirelens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first visual network protocol inspector",
+  "license": "MIT",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm --recursive --if-present build",
+    "check": "pnpm --recursive --if-present check",
+    "format:check": "prettier --check --ignore-unknown .",
+    "lint": "pnpm --recursive --if-present lint",
+    "test": "pnpm --recursive --if-present test",
+    "test:e2e": "pnpm --dir web test:e2e"
+  },
+  "devDependencies": {
+    "prettier": "3.9.6"
+  }
+}

@@ -1,0 +1,39 @@
+# Local tools and agent workspaces
+.tools/
+.worktrees/
+.superpowers/
+
+# C++ and CMake output
+build/
+build-*/
+cmake-build-*/
+_deps/
+compile_commands.json
+
+# Node and Svelte output
+node_modules/
+**/node_modules/
+web/.svelte-kit/
+web/build/
+coverage/
+
+# WebAssembly build output
+web/static/wasm/*
+!web/static/wasm/.gitkeep
+
+# Browser test output
+playwright-report/
+test-results/
+web/playwright-report/
+web/test-results/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor and operating-system files
+.DS_Store
+*.swp
