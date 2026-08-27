@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -11,8 +12,9 @@
 #include <vector>
 
 namespace wirelens::wasm_testing {
+std::size_t allocation_registry_size() noexcept;
 std::size_t registry_size() noexcept;
-}
+} // namespace wirelens::wasm_testing
 
 namespace {
 
@@ -101,7 +103,41 @@ TEST_CASE("Wasm API registry is cleaned after every result release") {
   REQUIRE(wirelens::wasm_testing::registry_size() == before);
 }
 
+TEST_CASE("Wasm API consumes only registered allocations with exact sizes") {
+  const auto before = wirelens::wasm_testing::allocation_registry_size();
+
+  const auto exact = wirelens_alloc(1);
+  REQUIRE(exact != 0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before + 1);
+  const auto mismatch = wirelens_parse_owned(exact, 24);
+  REQUIRE(mismatch == 0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
+
+  std::array<std::byte, 24> arbitrary{};
+  REQUIRE(wirelens_parse_owned(reinterpret_cast<uintptr_t>(arbitrary.data()), arbitrary.size()) ==
+          0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
+}
+
+TEST_CASE("Wasm API rejects a consumed allocation on a second parse") {
+  const auto before = wirelens::wasm_testing::allocation_registry_size();
+  const auto bytes = wirelens_test::build_handshake();
+  const auto pointer = wirelens_alloc(bytes.size());
+  REQUIRE(pointer != 0);
+  std::memcpy(reinterpret_cast<void*>(pointer), bytes.data(), bytes.size());
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before + 1);
+
+  const auto handle = wirelens_parse_owned(pointer, bytes.size());
+  REQUIRE(handle != 0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
+  REQUIRE(wirelens_parse_owned(pointer, bytes.size()) == 0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
+  wirelens_release(handle);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
+}
+
 TEST_CASE("Wasm API reports allocation and ownership boundary failures") {
+  const auto before = wirelens::wasm_testing::allocation_registry_size();
   REQUIRE(wirelens_alloc(0) == 0);
   REQUIRE(wirelens_alloc(std::numeric_limits<std::size_t>::max()) == 0);
   REQUIRE(wirelens_parse_owned(0, 0) == 0);
@@ -109,8 +145,6 @@ TEST_CASE("Wasm API reports allocation and ownership boundary failures") {
   const auto pointer = wirelens_alloc(1);
   REQUIRE(pointer != 0);
   const auto handle = wirelens_parse_owned(pointer, 64U * 1024U * 1024U + 1U);
-  REQUIRE(handle != 0);
-  REQUIRE(wirelens_result_ok(handle) == 0);
-  REQUIRE(std::string(wirelens_result_error_code(handle)) == "FILE_TOO_LARGE");
-  wirelens_release(handle);
+  REQUIRE(handle == 0);
+  REQUIRE(wirelens::wasm_testing::allocation_registry_size() == before);
 }

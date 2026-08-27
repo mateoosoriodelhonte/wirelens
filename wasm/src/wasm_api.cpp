@@ -9,6 +9,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <span>
 #include <string>
 #include <unordered_map>
@@ -38,10 +39,6 @@ struct Result {
   Result(OwnedInput ownedInput, const std::size_t size, wirelens::ParseResult parsedResult)
       : input(std::move(ownedInput)), inputSize(size), parsed(std::move(parsedResult)) {}
 };
-
-wirelens::ParseError internal_error(const char* message) {
-  return {"INTERNAL_ERROR", message, std::nullopt, std::nullopt};
-}
 
 bool is_little_endian_magic(const std::byte* bytes) noexcept {
   const auto first = std::to_integer<unsigned char>(bytes[0]);
@@ -82,6 +79,50 @@ std::vector<PacketRange> packet_ranges(const Result& result) {
   }
   return ranges;
 }
+
+struct Allocation {
+  OwnedInput input;
+  std::size_t size = 0;
+};
+
+class AllocationRegistry {
+public:
+  bool record(const uintptr_t pointer, const std::size_t size) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      return values_.emplace(pointer, size).second;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  std::optional<Allocation> consume(const uintptr_t pointer) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      const auto found = values_.find(pointer);
+      if (found == values_.end())
+        return std::nullopt;
+      const auto size = found->second;
+      values_.erase(found);
+      return Allocation{OwnedInput(reinterpret_cast<std::byte*>(pointer)), size};
+    } catch (...) {
+      return std::nullopt;
+    }
+  }
+
+  std::size_t size() const noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      return values_.size();
+    } catch (...) {
+      return 0;
+    }
+  }
+
+private:
+  mutable std::mutex mutex_;
+  std::unordered_map<uintptr_t, std::size_t> values_;
+};
 
 class Registry {
 public:
@@ -146,9 +187,16 @@ Registry& registry() noexcept {
   return instance;
 }
 
+AllocationRegistry& allocation_registry() noexcept {
+  static AllocationRegistry instance;
+  return instance;
+}
+
 } // namespace
 
 namespace wirelens::wasm_testing {
+
+std::size_t allocation_registry_size() noexcept { return allocation_registry().size(); }
 
 std::size_t registry_size() noexcept { return registry().size(); }
 
@@ -159,36 +207,34 @@ extern "C" {
 uintptr_t wirelens_alloc(const size_t size) noexcept {
   if (size == 0)
     return 0;
-  try {
-    return reinterpret_cast<uintptr_t>(std::malloc(size));
-  } catch (...) {
+  const auto pointer = std::malloc(size);
+  if (pointer == nullptr)
+    return 0;
+  const auto address = reinterpret_cast<uintptr_t>(pointer);
+  if (!allocation_registry().record(address, size)) {
+    std::free(pointer);
     return 0;
   }
+  return address;
 }
 
 uint32_t wirelens_parse_owned(const uintptr_t data, const size_t size) noexcept {
   if (data == 0)
     return 0;
 
-  OwnedInput input(reinterpret_cast<std::byte*>(data));
+  auto allocation = allocation_registry().consume(data);
+  if (!allocation || allocation->size != size)
+    return 0;
+  OwnedInput input = std::move(allocation->input);
   try {
-    wirelens::ParseResult parsed;
-    try {
-      parsed = wirelens::parse_capture(std::span<const std::byte>(input.get(), size));
-    } catch (...) {
-      parsed = internal_error("The capture could not be parsed");
-    }
+    wirelens::ParseResult parsed =
+        wirelens::parse_capture(std::span<const std::byte>(input.get(), size));
 
     auto result = std::make_unique<Result>(std::move(input), size, std::move(parsed));
     if (std::holds_alternative<wirelens::CaptureDocument>(result->parsed)) {
-      try {
-        result->serialized =
-            wirelens::serialize_capture(std::get<wirelens::CaptureDocument>(result->parsed));
-        result->packetRanges = packet_ranges(*result);
-      } catch (...) {
-        result->parsed = internal_error("The capture result could not be serialized");
-        result->serialized.clear();
-      }
+      result->serialized =
+          wirelens::serialize_capture(std::get<wirelens::CaptureDocument>(result->parsed));
+      result->packetRanges = packet_ranges(*result);
     }
     return registry().insert(std::move(result));
   } catch (...) {
