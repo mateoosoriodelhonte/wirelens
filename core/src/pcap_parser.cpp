@@ -10,9 +10,8 @@
 #include <utility>
 
 namespace wirelens {
+ParseResult parse_pcapng(std::span<const std::byte> bytes);
 namespace {
-constexpr std::uint64_t kMaxJsonSafeInteger = 9007199254740991ULL;
-
 ParseError error(std::string code, std::string message,
                  std::optional<std::size_t> offset = std::nullopt,
                  std::optional<std::size_t> packet = std::nullopt) {
@@ -31,15 +30,18 @@ bool timestamp(const std::uint32_t seconds, const std::uint32_t fraction,
 
 ParseResult parse_capture(const std::span<const std::byte> bytes) {
   static_assert(static_cast<std::uint64_t>(kMaxPacketCount) *
-                    std::numeric_limits<std::uint32_t>::max() <=
-                kMaxJsonSafeInteger);
+                    std::numeric_limits<std::uint32_t>::max() <= 9007199254740991ULL);
   if (bytes.size() > kMaxCaptureBytes)
     return error("FILE_TOO_LARGE", "Capture exceeds the 64 MiB limit");
-  if (bytes.size() < 24)
-    return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
+  if (bytes.size() < 4)
+    return error("TRUNCATED_GLOBAL_HEADER", "Capture global header is truncated");
   const auto magic = std::array<std::uint8_t, 4>{
       std::to_integer<std::uint8_t>(bytes[0]), std::to_integer<std::uint8_t>(bytes[1]),
       std::to_integer<std::uint8_t>(bytes[2]), std::to_integer<std::uint8_t>(bytes[3])};
+  if (magic == std::array<std::uint8_t, 4>{0x0a, 0x0d, 0x0d, 0x0a})
+    return parse_pcapng(bytes);
+  if (bytes.size() < 24)
+    return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
   const bool little = magic == std::array<std::uint8_t, 4>{0xd4, 0xc3, 0xb2, 0xa1} ||
                       magic == std::array<std::uint8_t, 4>{0x4d, 0x3c, 0xb2, 0xa1};
   const bool big = magic == std::array<std::uint8_t, 4>{0xa1, 0xb2, 0xc3, 0xd4} ||
@@ -56,14 +58,18 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
   if (*major != 2 || *minor != 4)
     return error("UNSUPPORTED_VERSION", "Only PCAP version 2.4 is supported", 4);
-  (void)header.skip(12);
+  (void)header.skip(4);
+  const auto snapLength = little ? header.read_u32_le() : header.read_u32_be();
+  (void)header.skip(4);
   const auto linkType = little ? header.read_u32_le() : header.read_u32_be();
-  if (!linkType)
+  if (!snapLength || !linkType)
     return error("TRUNCATED_GLOBAL_HEADER", "PCAP global header is truncated");
   if (*linkType != 1)
     return error("UNSUPPORTED_LINK_TYPE", "Only Ethernet link type is supported", 20);
   CaptureDocument capture;
+  capture.capture.format = "pcap";
   capture.capture.timestampResolution = nanoseconds ? "nanoseconds" : "microseconds";
+  capture.capture.interfaces.push_back({0, 1, *snapLength, capture.capture.timestampResolution});
   std::vector<internal::ParsedPacket> parsed;
   std::size_t offset = 24;
   std::size_t number = 1;
@@ -94,12 +100,16 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     packet.packet.timestampNs = time;
     packet.packet.capturedLength = *captured;
     packet.packet.originalLength = *original;
+    packet.packet.interfaceId = 0;
+    packet.sourceRange = {offset + 16, 0, *captured};
     internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
-                              packet.tcp);
-    packet.packet.summary =
-        packet.tcp.valid ? internal::flag_text(packet.tcp.flags)
-                         : (packet.packet.layers.empty() ? "Truncated frame" : "Ethernet frame");
+                              packet.tcp, packet.udp);
+    packet.packet.summary = packet.tcp.valid ? internal::flag_text(packet.tcp.flags)
+                               : (packet.udp.valid ? "UDP datagram"
+                                                   : (packet.packet.layers.empty() ? "Truncated frame"
+                                                                                   : "Ethernet frame"));
     parsed.push_back(std::move(packet));
+    capture.packetSourceRanges.push_back({offset + 16, 0, *captured});
     if (!capture.capture.startTimestampNs)
       capture.capture.startTimestampNs = time;
     capture.capture.endTimestampNs = time;

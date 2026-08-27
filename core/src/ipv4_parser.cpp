@@ -29,7 +29,8 @@ std::string address(const std::span<const std::byte> bytes) {
 
 std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payload,
                                          const std::size_t captureOffset,
-                                         const std::size_t packetOffset, TcpFacts& facts,
+                                         const std::size_t packetOffset, TcpFacts& tcp,
+                                         UdpFacts& udp,
                                          Packet& packet) {
   if (payload.size() < 20)
     return std::nullopt;
@@ -58,14 +59,24 @@ std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payloa
   add_field(layer, "destination", destination, captureOffset, packetOffset + 16, 4);
   packet.sourceAddress = source;
   packet.destinationAddress = destination;
-  if (protocol == 6 && fragmentOffset == 0) {
-    if (const auto tcp = decode_tcp(payload.subspan(headerLength, boundedLength - headerLength),
-                                    captureOffset, packetOffset + headerLength, facts)) {
-      packet.sourcePort = facts.sourcePort;
-      packet.destinationPort = facts.destinationPort;
-      packet.layers.push_back(*tcp);
-      facts.source = source;
-      facts.destination = destination;
+  if (fragmentOffset == 0) {
+    const auto transport = payload.subspan(headerLength, boundedLength - headerLength);
+    if (protocol == 6) {
+      if (const auto layer = decode_tcp(transport, captureOffset, packetOffset + headerLength, tcp)) {
+        packet.sourcePort = tcp.sourcePort;
+        packet.destinationPort = tcp.destinationPort;
+        packet.layers.push_back(*layer);
+        tcp.source = source;
+        tcp.destination = destination;
+      }
+    } else if (protocol == 17) {
+      if (const auto layer = decode_udp(transport, captureOffset, packetOffset + headerLength, udp)) {
+        packet.sourcePort = udp.sourcePort;
+        packet.destinationPort = udp.destinationPort;
+        packet.layers.push_back(*layer);
+        udp.source = source;
+        udp.destination = destination;
+      }
     }
   }
   return layer;

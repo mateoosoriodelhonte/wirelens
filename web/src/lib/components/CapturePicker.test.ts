@@ -13,6 +13,14 @@ describe('CapturePicker', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/ready to inspect/i);
   });
 
+  it('accepts PCAPNG files and reports them to the caller', async () => {
+    const onFile = vi.fn();
+    render(CapturePicker, { props: { onFile } });
+    const file = new File(['pcapng'], 'capture.pcapng', { type: 'application/vnd.tcpdump.pcapng' });
+    await fireEvent.change(screen.getByLabelText(/capture file/i), { target: { files: [file] } });
+    expect(onFile).toHaveBeenCalledWith(file);
+  });
+
   it('rejects unsupported extensions before parsing', async () => {
     const onFile = vi.fn();
     render(CapturePicker, { props: { onFile } });

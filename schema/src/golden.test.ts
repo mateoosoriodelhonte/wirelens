@@ -27,7 +27,7 @@ describe('reviewed handshake golden document', () => {
   it('matches the versioned three-packet TCP contract', () => {
     const document = readGolden();
     expect(document.schema).toBe('wirelens.capture');
-    expect(document.contractVersion).toBe('1.0.0');
+    expect(document.contractVersion).toBe('2.0.0');
     expect(document.packets).toHaveLength(3);
     expect(document.packets.map((packet) => packet.layers.map((layer) => layer.protocol))).toEqual([
       ['ETHERNET', 'IPV4', 'TCP'],

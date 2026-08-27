@@ -34,7 +34,7 @@ std::uint16_t u16be(const std::span<const std::byte> bytes, const std::size_t of
 } // namespace
 
 void decode_ethernet(const std::span<const std::byte> frame, const std::size_t captureOffset,
-                     Packet& packet, TcpFacts& facts) {
+                     Packet& packet, TcpFacts& tcp, UdpFacts& udp) {
   if (frame.size() < 14)
     return;
   ProtocolLayer layer{"ETHERNET", "Ethernet II", {}, std::nullopt, std::nullopt};
@@ -54,10 +54,13 @@ void decode_ethernet(const std::span<const std::byte> frame, const std::size_t c
     add_field(layer, "etherType", std::to_string(etherType), captureOffset, networkOffset - 2, 2);
   }
   packet.layers.push_back(std::move(layer));
-  if (etherType == 0x0800U && frame.size() >= networkOffset) {
+  if ((etherType == 0x0800U || etherType == 0x86ddU) && frame.size() >= networkOffset) {
     const auto beforeIp = packet.layers.size();
-    if (const auto ip = decode_ipv4(frame.subspan(networkOffset), captureOffset, networkOffset,
-                                    facts, packet)) {
+    const auto payload = frame.subspan(networkOffset);
+    const auto ip = etherType == 0x0800U
+                        ? decode_ipv4(payload, captureOffset, networkOffset, tcp, udp, packet)
+                        : decode_ipv6(payload, captureOffset, networkOffset, tcp, udp, packet);
+    if (ip) {
       std::optional<ProtocolLayer> tcp;
       if (packet.layers.size() > beforeIp) {
         tcp = std::move(packet.layers.back());

@@ -31,6 +31,7 @@
   const selectedFlow = $derived(
     document?.flows.find((flow) => flow.id === selectedFlowId) ?? document?.flows[0],
   );
+  const selectedTcpFlow = $derived(selectedFlow?.protocol === 'TCP' ? selectedFlow : undefined);
 
   onMount(() => {
     isBrowser = true;
@@ -139,7 +140,7 @@
           {selectedFlowId}
           onSelect={(id) => (selectedFlowId = id)}
         />
-        {#if selectedFlow}<TcpSequence {document} flow={selectedFlow} />{/if}
+        {#if selectedTcpFlow}<TcpSequence {document} flow={selectedTcpFlow} />{:else if selectedFlow}<section class="udp-note" aria-label="UDP flow"><strong>UDP datagrams</strong><p>This flow has no TCP sequence handshake.</p></section>{/if}
       </div>
       <div class="split packet-split">
         <PacketTable

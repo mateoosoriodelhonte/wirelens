@@ -25,11 +25,21 @@ int main(int argc, char** argv) {
   const auto malformed = root / "malformed.pcap";
   const auto summary = root / "summary.txt";
   const auto json = root / "capture.json";
+  const auto pcapng = root / "ipv6-udp.pcapng";
   {
     std::ofstream output(capture, std::ios::binary);
     const auto bytes = wirelens_test::build_handshake();
     output.write(reinterpret_cast<const char*>(bytes.data()),
                  static_cast<std::streamsize>(bytes.size()));
+  }
+  {
+    auto project = std::filesystem::current_path();
+    for (std::size_t levels = 0; levels < 8 && !std::filesystem::exists(project / "fixtures/generated/ipv6-udp.pcapng"); ++levels)
+      project = project.parent_path();
+    if (!std::filesystem::exists(project / "fixtures/generated/ipv6-udp.pcapng"))
+      return 8;
+    std::filesystem::copy_file(project / "fixtures/generated/ipv6-udp.pcapng", pcapng,
+                                std::filesystem::copy_options::overwrite_existing);
   }
   {
     std::ofstream output(malformed, std::ios::binary);
@@ -55,5 +65,10 @@ int main(int argc, char** argv) {
       output.find("\"packet-1\"") == std::string::npos ||
       output.find("\"rawBytes\"") != std::string::npos)
     return 7;
+  const auto udpSummary = root / "udp-summary.txt";
+  if (std::system((quote(argv[1]) + " " + quote(pcapng) + " >" + quote(udpSummary)).c_str()) != 0)
+    return 9;
+  if (read_file(udpSummary).find("TCP connections: 0\n") == std::string::npos)
+    return 10;
   return 0;
 }

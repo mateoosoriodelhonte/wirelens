@@ -11,4 +11,5 @@ export type {
   ProtocolName,
   TcpFlow,
   TcpFlowEvent,
+  UdpFlow,
 } from '@wirelens/schema';

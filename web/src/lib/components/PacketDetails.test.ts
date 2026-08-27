@@ -20,6 +20,7 @@ describe('PacketDetails', () => {
       timestampNs: '1000000000',
       capturedLength: 54,
       originalLength: 54,
+      interfaceId: 0,
       sourceEndpointId: 'endpoint-client',
       destinationEndpointId: 'endpoint-server',
       flowId: 'tcp-flow-1',

@@ -25,7 +25,7 @@
     </div>
     <div class="metric" role="listitem">
       <span>Conversations</span><strong>{document.flows.length}</strong><small
-        >TCP flow{document.flows.length === 1 ? '' : 's'}</small
+        >{document.flows.every((flow) => flow.protocol === 'TCP') ? 'TCP ' : ''}flow{document.flows.length === 1 ? '' : 's'}</small
       >
     </div>
   </div>

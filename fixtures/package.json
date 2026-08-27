@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node --experimental-strip-types src/build-handshake.ts",
+    "build": "node --experimental-strip-types src/build-handshake.ts && node --experimental-strip-types src/build-phase2-captures.ts",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"

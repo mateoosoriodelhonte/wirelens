@@ -14,11 +14,14 @@
   ],
   "properties": {
     "schema": { "const": "wirelens.capture" },
-    "contractVersion": { "const": "1.0.0" },
+    "contractVersion": { "const": "2.0.0" },
     "capture": { "$ref": "#/$defs/capture" },
     "endpoints": { "type": "array", "items": { "$ref": "#/$defs/endpoint" } },
     "packets": { "type": "array", "items": { "$ref": "#/$defs/packet" } },
-    "flows": { "type": "array", "items": { "$ref": "#/$defs/tcpFlow" } },
+    "flows": {
+      "type": "array",
+      "items": { "oneOf": [{ "$ref": "#/$defs/tcpFlow" }, { "$ref": "#/$defs/udpFlow" }] }
+    },
     "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
   },
   "$defs": {
@@ -49,17 +52,31 @@
         "originalBytes",
         "startTimestampNs",
         "endTimestampNs",
-        "durationNs"
+        "durationNs",
+        "interfaces"
       ],
       "properties": {
-        "format": { "const": "pcap" },
-        "timestampResolution": { "enum": ["microseconds", "nanoseconds"] },
+        "format": { "enum": ["pcap", "pcapng"] },
+        "timestampResolution": {
+          "enum": ["microseconds", "nanoseconds", "binary", "custom", "mixed"]
+        },
         "packetCount": { "$ref": "#/$defs/nonNegativeInteger" },
         "capturedBytes": { "$ref": "#/$defs/nonNegativeInteger" },
         "originalBytes": { "$ref": "#/$defs/nonNegativeInteger" },
         "startTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
         "endTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
-        "durationNs": { "$ref": "#/$defs/decimalString" }
+        "durationNs": { "$ref": "#/$defs/decimalString" },
+        "interfaces": { "type": "array", "items": { "$ref": "#/$defs/captureInterface" } }
+      }
+    },
+    "captureInterface": {
+      "type": "object",
+      "required": ["id", "linkType", "snapLength", "timestampResolution"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "linkType": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "snapLength": { "type": "integer", "minimum": 0 },
+        "timestampResolution": { "enum": ["microseconds", "nanoseconds", "binary", "custom"] }
       }
     },
     "endpoint": {
@@ -80,6 +97,7 @@
         "timestampNs",
         "capturedLength",
         "originalLength",
+        "interfaceId",
         "sourceEndpointId",
         "destinationEndpointId",
         "summary",
@@ -93,6 +111,7 @@
         "timestampNs": { "$ref": "#/$defs/decimalString" },
         "capturedLength": { "$ref": "#/$defs/nonNegativeInteger" },
         "originalLength": { "$ref": "#/$defs/nonNegativeInteger" },
+        "interfaceId": { "anyOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }] },
         "sourceEndpointId": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
         "destinationEndpointId": {
           "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
@@ -157,6 +176,31 @@
         "events": { "type": "array", "items": { "$ref": "#/$defs/tcpEvent" } }
       }
     },
+    "udpFlow": {
+      "type": "object",
+      "required": [
+        "id",
+        "protocol",
+        "clientEndpointId",
+        "serverEndpointId",
+        "startTimestampNs",
+        "endTimestampNs",
+        "packetNumbers",
+        "capturedBytes",
+        "originalBytes"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^udp-flow-[1-9][0-9]*$" },
+        "protocol": { "const": "UDP" },
+        "clientEndpointId": { "type": "string", "minLength": 1 },
+        "serverEndpointId": { "type": "string", "minLength": 1 },
+        "startTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "endTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "packetNumbers": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "capturedBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "originalBytes": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
     "tcpEvent": {
       "type": "object",
       "required": ["packetNumber", "label"],
@@ -167,7 +211,15 @@
     },
     "diagnostic": {
       "type": "object",
-      "required": ["severity", "code", "message", "context", "captureOffset", "packetNumber"],
+      "required": [
+        "severity",
+        "code",
+        "message",
+        "context",
+        "captureOffset",
+        "packetNumber",
+        "count"
+      ],
       "properties": {
         "severity": { "enum": ["info", "warning", "error"] },
         "code": { "type": "string", "minLength": 1 },
@@ -176,7 +228,8 @@
         "captureOffset": {
           "anyOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }]
         },
-        "packetNumber": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }
+        "packetNumber": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "count": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }
       }
     }
   }

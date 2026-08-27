@@ -4,7 +4,7 @@ import { validateCaptureDocument } from './validate.js';
 describe('validateCaptureDocument', () => {
   const minimal = () => ({
     schema: 'wirelens.capture',
-    contractVersion: '1.0.0',
+    contractVersion: '2.0.0',
     capture: {
       format: 'pcap',
       timestampResolution: 'microseconds',
@@ -14,6 +14,7 @@ describe('validateCaptureDocument', () => {
       startTimestampNs: null,
       endTimestampNs: null,
       durationNs: '0',
+      interfaces: [],
     },
     endpoints: [],
     packets: [],
@@ -23,13 +24,62 @@ describe('validateCaptureDocument', () => {
 
   it('rejects an unknown contract major version', () => {
     expect(() =>
-      validateCaptureDocument({ schema: 'wirelens.capture', contractVersion: '2.0.0' }),
+      validateCaptureDocument({ schema: 'wirelens.capture', contractVersion: '1.0.0' }),
+    ).toThrow(/contractVersion/);
+  });
+
+  it('rejects both the previous major and an unknown future major', () => {
+    expect(() =>
+      validateCaptureDocument({ schema: 'wirelens.capture', contractVersion: '1.0.0' }),
+    ).toThrow(/contractVersion/);
+    expect(() =>
+      validateCaptureDocument({ schema: 'wirelens.capture', contractVersion: '3.0.0' }),
     ).toThrow(/contractVersion/);
   });
 
   it('accepts the minimal Phase 1 document', () => {
     const value = minimal();
     expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts a PCAPNG interface and a UDP flow in contract v2', () => {
+    const value = minimal() as Record<string, any>;
+    value.capture.format = 'pcapng';
+    value.capture.interfaces = [
+      { id: 0, linkType: 1, snapLength: 0, timestampResolution: 'nanoseconds' },
+    ];
+    value.flows = [
+      {
+        id: 'udp-flow-1',
+        protocol: 'UDP',
+        clientEndpointId: 'endpoint-1',
+        serverEndpointId: 'endpoint-2',
+        startTimestampNs: '0',
+        endTimestampNs: '1',
+        packetNumbers: [1],
+        capturedBytes: 8,
+        originalBytes: 8,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('requires diagnostic count and accepts a positive aggregate count', () => {
+    const value = minimal() as Record<string, any>;
+    value.diagnostics = [
+      {
+        severity: 'warning',
+        code: 'UNKNOWN_PCAPNG_BLOCK',
+        message: 'unknown',
+        context: 'pcapng',
+        captureOffset: null,
+        packetNumber: null,
+        count: 2,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+    delete value.diagnostics[0].count;
+    expect(() => validateCaptureDocument(value)).toThrow(/count/);
   });
 
   it('permits unknown optional fields for minor-version compatibility', () => {

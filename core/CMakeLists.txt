@@ -1,8 +1,11 @@
 add_library(wirelens_core
   src/byte_reader.cpp
   src/pcap_parser.cpp
+  src/pcapng_parser.cpp
   src/ethernet_parser.cpp
   src/ipv4_parser.cpp
+  src/ipv6_parser.cpp
+  src/udp_parser.cpp
   src/tcp_parser.cpp
   src/flow_builder.cpp
   src/serialize.cpp)

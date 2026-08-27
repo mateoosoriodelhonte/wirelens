@@ -69,8 +69,8 @@ const defaultWorkerFactory: WorkerFactory = () =>
   }) as unknown as ParserWorker;
 
 function inputError(file: Pick<File, 'name' | 'size'>): ParserInputError | null {
-  if (!file.name.toLowerCase().endsWith('.pcap')) {
-    return new ParserInputError('UNSUPPORTED_FORMAT', 'Only .pcap capture files are supported');
+  if (!/\.(pcap|pcapng)$/i.test(file.name)) {
+    return new ParserInputError('UNSUPPORTED_FORMAT', 'Choose a .pcap or .pcapng capture file');
   }
   if (file.size > MAX_CAPTURE_BYTES) {
     return new ParserInputError('FILE_TOO_LARGE', 'Capture exceeds the 64 MiB limit');

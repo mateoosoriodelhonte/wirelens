@@ -13,14 +13,14 @@
     captureStatus === 'loading'
       ? 'Reading the selected capture locally…'
       : captureStatus === 'error'
-        ? 'Capture could not be read. Choose another .pcap.'
+        ? 'Capture could not be read. Choose another .pcap or .pcapng.'
         : status,
   );
 
   function selectFile(file: File | undefined) {
     if (!file) return;
-    if (!/\.pcap$/i.test(file.name)) {
-      error = 'Choose a .pcap file.';
+    if (!/\.(pcap|pcapng)$/i.test(file.name)) {
+      error = 'Choose a .pcap or .pcapng file.';
       status = 'Capture type not supported.';
       return;
     }
@@ -58,11 +58,11 @@
   >
     <span class="drop-icon" aria-hidden="true">↥</span>
     <span class="drop-title">Choose a capture file</span>
-    <span class="drop-help">.pcap · up to 64 MiB · drag and drop also works</span>
+    <span class="drop-help">.pcap · .pcapng · up to 64 MiB · drag and drop also works</span>
     <input
       aria-label="Capture file"
       type="file"
-      accept=".pcap,application/vnd.tcpdump.pcap"
+      accept=".pcap,.pcapng,application/vnd.tcpdump.pcap,application/vnd.tcpdump.pcapng"
       onchange={handleChange}
     />
   </label>

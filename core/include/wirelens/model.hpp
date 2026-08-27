@@ -37,6 +37,13 @@ struct Endpoint {
   std::string addressFamily = "unknown";
 };
 
+struct CaptureInterface {
+  std::size_t id = 0;
+  std::uint16_t linkType = 1;
+  std::uint32_t snapLength = 0;
+  std::string timestampResolution = "microseconds";
+};
+
 struct Packet {
   std::string id;
   std::size_t number = 0;
@@ -53,6 +60,7 @@ struct Packet {
   std::optional<std::string> destinationEndpointId;
   std::vector<std::string> analysisFlags;
   std::vector<ProtocolLayer> layers;
+  std::optional<std::size_t> interfaceId;
 };
 
 enum class HandshakeState { unobserved, partial, complete };
@@ -60,6 +68,7 @@ enum class HandshakeState { unobserved, partial, complete };
 struct FlowEndpoint {
   std::string address;
   std::uint16_t port = 0;
+  std::string addressFamily = "unknown";
 };
 
 struct FlowEvent {
@@ -68,7 +77,7 @@ struct FlowEvent {
   std::string label;
 };
 
-struct TcpFlow {
+struct Flow {
   std::string id;
   std::string protocol = "TCP";
   FlowEndpoint client;
@@ -86,6 +95,8 @@ struct TcpFlow {
   std::vector<FlowEvent> events;
 };
 
+using TcpFlow = Flow;
+
 struct CaptureInfo {
   std::string format = "pcap";
   std::string timestampResolution = "microseconds";
@@ -95,6 +106,7 @@ struct CaptureInfo {
   std::optional<std::string> startTimestampNs;
   std::optional<std::string> endTimestampNs;
   std::string durationNs = "0";
+  std::vector<CaptureInterface> interfaces;
 };
 
 struct Diagnostic {
@@ -104,16 +116,20 @@ struct Diagnostic {
   std::string context;
   std::optional<std::size_t> captureOffset;
   std::optional<std::size_t> packetNumber;
+  std::optional<std::size_t> count;
 };
 
 struct CaptureDocument {
   std::string schema = "wirelens.capture";
-  std::string contractVersion = "1.0.0";
+  std::string contractVersion = "2.0.0";
   CaptureInfo capture;
   std::vector<Endpoint> endpoints;
   std::vector<Packet> packets;
-  std::vector<TcpFlow> flows;
+  std::vector<Flow> flows;
   std::vector<Diagnostic> diagnostics;
+  // Private packet byte locations used by the native/WASM byte bridge. This
+  // member is deliberately omitted by serialize_capture().
+  std::vector<ByteRange> packetSourceRanges;
 };
 
 } // namespace wirelens

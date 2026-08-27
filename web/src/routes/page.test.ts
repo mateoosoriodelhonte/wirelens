@@ -36,7 +36,7 @@ describe('capture page', () => {
     ).toBeVisible();
     expect(screen.getByText(/nothing is uploaded/i)).toBeVisible();
     expect(screen.getByText(/\.pcap.*drag and drop also works/i)).toBeVisible();
-    expect(screen.queryByText(/pcapng/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/\.pcap.*\.pcapng.*drag and drop also works/i)).toBeVisible();
     expect(screen.queryByText(/synthetic demo/i)).not.toBeInTheDocument();
   });
 

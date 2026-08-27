@@ -1,21 +1,21 @@
 {
   "capture": {
     "capturedBytes": 162,
-    "durationNs": "20000000",
-    "endTimestampNs": "1020000000",
+    "durationNs": "20000",
+    "endTimestampNs": "1000020000",
     "format": "pcap",
     "interfaces": [
       {
         "id": 0,
         "linkType": 1,
         "snapLength": 0,
-        "timestampResolution": "microseconds"
+        "timestampResolution": "nanoseconds"
       }
     ],
     "originalBytes": 162,
     "packetCount": 3,
     "startTimestampNs": "1000000000",
-    "timestampResolution": "microseconds"
+    "timestampResolution": "nanoseconds"
   },
   "contractVersion": "2.0.0",
   "diagnostics": [],
@@ -37,7 +37,7 @@
     {
       "capturedBytes": 162,
       "clientEndpointId": "endpoint-1",
-      "endTimestampNs": "1020000000",
+      "endTimestampNs": "1000020000",
       "events": [
         {
           "label": "SYN",
@@ -503,7 +503,7 @@
       "originalLength": 54,
       "sourceEndpointId": "endpoint-2",
       "summary": "SYN + ACK",
-      "timestampNs": "1010000000"
+      "timestampNs": "1000010000"
     },
     {
       "analysisFlags": [],
@@ -724,7 +724,7 @@
       "originalLength": 54,
       "sourceEndpointId": "endpoint-1",
       "summary": "ACK",
-      "timestampNs": "1020000000"
+      "timestampNs": "1000020000"
     }
   ],
   "schema": "wirelens.capture"
