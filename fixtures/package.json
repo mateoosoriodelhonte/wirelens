@@ -1,0 +1,17 @@
+{
+  "name": "@wirelens/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --experimental-strip-types src/build-handshake.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}

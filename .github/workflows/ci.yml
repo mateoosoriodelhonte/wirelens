@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phase-1:
+    name: Phase 1 verification
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm 11.24.0
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Set up project Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Verify host tool versions
+        run: |
+          node --version
+          test "$(node -p "process.versions.node.split('.')[0]")" = 22
+          test "$(pnpm --version)" = 11.24.0
+          python3 --version
+
+      - name: Install ripgrep
+        run: brew install ripgrep
+
+      - name: Bootstrap local CMake, Ninja, and clang-format
+        run: ./scripts/bootstrap-local-toolchain.sh
+
+      - name: Install pinned Emscripten 6.0.8
+        run: |
+          git clone --branch 6.0.8 --depth 1 https://github.com/emscripten-core/emsdk.git .tools/emsdk
+          .tools/emsdk/emsdk install 6.0.8
+          .tools/emsdk/emsdk activate 6.0.8
+          .tools/emsdk/upstream/emscripten/emcc --version | grep -F '6.0.8'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --dir web exec playwright install chromium
+
+      - name: Run the fail-fast Phase 1 gate
+        env:
+          WIRELENS_REQUIRE_E2E: '1'
+        run: pnpm verify:phase1
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            web/playwright-report/
+            web/test-results/
+          if-no-files-found: ignore

@@ -1,0 +1,6 @@
+build/
+coverage/
+docs/superpowers/
+node_modules/
+web/build/
+web/static/wasm/
