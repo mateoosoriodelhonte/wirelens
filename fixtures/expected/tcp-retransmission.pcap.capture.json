@@ -949,7 +949,7 @@
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.ack",
+              "explanationKey": "tcp.data",
               "name": "flags",
               "value": "ACK"
             },
@@ -971,7 +971,7 @@
       "number": 4,
       "originalLength": 59,
       "sourceEndpointId": "endpoint-1",
-      "summary": "ACK",
+      "summary": "TCP data",
       "timestampNs": "1030000000"
     },
     {
@@ -1170,7 +1170,7 @@
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.ack",
+              "explanationKey": "tcp.data",
               "name": "flags",
               "value": "ACK"
             },
@@ -1192,7 +1192,7 @@
       "number": 5,
       "originalLength": 59,
       "sourceEndpointId": "endpoint-1",
-      "summary": "ACK",
+      "summary": "TCP data",
       "timestampNs": "1040000000"
     },
     {
@@ -1391,7 +1391,7 @@
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.ack",
+              "explanationKey": "tcp.fin",
               "name": "flags",
               "value": "ACK, FIN"
             },
@@ -1612,7 +1612,7 @@
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.ack",
+              "explanationKey": "tcp.fin",
               "name": "flags",
               "value": "ACK, FIN"
             },

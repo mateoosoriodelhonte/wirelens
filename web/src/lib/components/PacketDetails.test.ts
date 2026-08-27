@@ -48,4 +48,17 @@ describe('PacketDetails', () => {
     expect(screen.getByText('TCP', { selector: '.protocol-tag' })).toBeInTheDocument();
     expect(screen.getByText(/synchronize sequence numbers/i)).toBeInTheDocument();
   });
+
+  it('does not describe reset or data packets as handshake completion', () => {
+    const packet = structuredClone(demoDocument.packets[2]);
+    const flags = packet.layers
+      .find((layer) => layer.protocol === 'TCP')
+      ?.fields.find((field) => field.name.toLowerCase() === 'flags');
+    if (!flags) throw new Error('TCP flags fixture is missing');
+    flags.value = 'ACK, RST';
+    flags.explanationKey = 'tcp.rst';
+    render(PacketDetails, { props: { packet, learningMode: true } });
+    expect(screen.getByText(/stopped the TCP connection/i)).toBeInTheDocument();
+    expect(screen.queryByText(/completes the handshake/i)).not.toBeInTheDocument();
+  });
 });

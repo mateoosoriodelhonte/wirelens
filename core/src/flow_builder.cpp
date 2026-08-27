@@ -30,9 +30,18 @@ std::string address_family(const std::string& address) {
 struct SegmentEvidence {
   std::span<const std::byte> payload;
   std::size_t packetNumber = 0;
+  std::uint64_t sequenceEpoch = 0;
 };
 
 using SegmentKey = std::tuple<bool, std::uint32_t, std::size_t, bool, bool, std::uint64_t>;
+using EndpointKey = std::pair<std::string, std::uint16_t>;
+using TupleKey =
+    std::tuple<bool, std::string, std::string, std::uint16_t, std::string, std::uint16_t>;
+
+struct DirectionSequenceState {
+  std::optional<std::uint32_t> highWater;
+  std::uint64_t epoch = 0;
+};
 
 struct FlowState {
   Flow flow;
@@ -43,27 +52,18 @@ struct FlowState {
   bool sawReset = false;
   bool sawForwardFin = false;
   bool sawReverseFin = false;
+  bool ambiguousReuse = false;
+  std::optional<std::uint32_t> initialSynSequence;
   std::vector<ParsedPacket*> packets;
 };
 
-bool tuple_matches(const FlowState& state, const bool isUdp, const std::string& source,
-                   const std::string& destination, const std::uint16_t sourcePort,
-                   const std::uint16_t destinationPort) {
-  if (state.isUdp != isUdp)
-    return false;
-  const auto& firstSource = state.isUdp ? state.firstUdp.source : state.firstTcp.source;
-  const auto& firstDestination =
-      state.isUdp ? state.firstUdp.destination : state.firstTcp.destination;
-  const auto firstSourcePort = state.isUdp ? state.firstUdp.sourcePort : state.firstTcp.sourcePort;
-  const auto firstDestinationPort =
-      state.isUdp ? state.firstUdp.destinationPort : state.firstTcp.destinationPort;
-  if (address_family(firstSource) != address_family(source))
-    return false;
-  const auto same = firstSource == source && firstDestination == destination &&
-                    firstSourcePort == sourcePort && firstDestinationPort == destinationPort;
-  const auto reverse = firstSource == destination && firstDestination == source &&
-                       firstSourcePort == destinationPort && firstDestinationPort == sourcePort;
-  return same || reverse;
+TupleKey tuple_key(const bool isUdp, const std::string& source, const std::string& destination,
+                   const std::uint16_t sourcePort, const std::uint16_t destinationPort) {
+  EndpointKey first{source, sourcePort};
+  EndpointKey second{destination, destinationPort};
+  if (second < first)
+    std::swap(first, second);
+  return {isUdp, address_family(source), first.first, first.second, second.first, second.second};
 }
 
 bool forward_from_first(const FlowState& state, const std::string& source,
@@ -79,6 +79,32 @@ bool terminal(const FlowState& state) {
 
 std::uint32_t serial_advance(const std::uint32_t value, const std::uint32_t amount) {
   return value + amount;
+}
+
+bool serial_before(const std::uint32_t left, const std::uint32_t right) {
+  const auto distance = right - left;
+  return distance != 0U && distance < kSerialHalfSpace;
+}
+
+std::uint32_t sequence_span(const TcpFacts& tcp) {
+  return static_cast<std::uint32_t>(tcp.payload.size()) +
+         static_cast<std::uint32_t>(has_flag(tcp.flags, kSyn)) +
+         static_cast<std::uint32_t>(has_flag(tcp.flags, kFin));
+}
+
+std::uint64_t sequence_epoch(DirectionSequenceState& direction, const std::uint32_t sequence,
+                             const std::uint32_t span) {
+  const auto end = serial_advance(sequence, span);
+  if (!direction.highWater) {
+    direction.highWater = end;
+    return direction.epoch;
+  }
+  if (serial_before(*direction.highWater, end)) {
+    if (end < *direction.highWater)
+      ++direction.epoch;
+    direction.highWater = end;
+  }
+  return direction.epoch;
 }
 
 bool same_payload(const std::span<const std::byte> left, const std::span<const std::byte> right) {
@@ -131,12 +157,16 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
   bool sawReset = false;
   std::uint32_t clientSequence = 0;
   std::uint32_t serverSequence = 0;
+  std::uint32_t clientSynSpan = 0;
+  std::uint32_t serverSynSpan = 0;
   std::optional<std::size_t> firstHandshakePacket;
   std::optional<std::size_t> firstResetPacket;
   std::map<SegmentKey, std::vector<SegmentEvidence>> segments;
+  DirectionSequenceState clientSequenceState;
+  DirectionSequenceState serverSequenceState;
 
   state.flow.events.clear();
-  state.flow.midStream = !state.roleSetBySyn;
+  state.flow.midStream = !state.roleSetBySyn || state.ambiguousReuse;
   for (const auto* parsed : state.packets) {
     const auto& tcp = parsed->tcp;
     const auto syn = has_flag(tcp.flags, kSyn);
@@ -152,13 +182,16 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
     if (syn && !ack && fromClient && !sawSyn) {
       sawSyn = true;
       clientSequence = tcp.sequence;
+      clientSynSpan = sequence_span(tcp);
     } else if (syn && ack && !fromClient && sawSyn &&
-               tcp.acknowledgment == serial_advance(clientSequence, 1U) && !sawSynAck) {
+               tcp.acknowledgment == serial_advance(clientSequence, clientSynSpan) && !sawSynAck) {
       sawSynAck = true;
       serverSequence = tcp.sequence;
+      serverSynSpan = sequence_span(tcp);
     } else if (!syn && ack && fromClient && sawSynAck &&
-               tcp.sequence == serial_advance(clientSequence, 1U) &&
-               tcp.acknowledgment == serial_advance(serverSequence, 1U) && !sawFinalAck) {
+               tcp.sequence == serial_advance(clientSequence, clientSynSpan) &&
+               tcp.acknowledgment == serial_advance(serverSequence, serverSynSpan) &&
+               !sawFinalAck) {
       sawFinalAck = true;
       completingAck = true;
     }
@@ -191,21 +224,22 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
     if (!event.empty())
       state.flow.events.push_back({parsed->packet.id, parsed->packet.number, std::move(event)});
 
-    const auto sequenceSpan = static_cast<std::uint64_t>(tcp.payload.size()) +
-                              static_cast<std::uint64_t>(syn) + static_cast<std::uint64_t>(fin);
-    if (tcp.payloadComplete && !tcp.payload.empty() && sequenceSpan < kSerialHalfSpace) {
+    const auto sequenceSpan = sequence_span(tcp);
+    if (tcp.payloadComplete && sequenceSpan > 0U && sequenceSpan < kSerialHalfSpace) {
+      auto& direction = fromClient ? clientSequenceState : serverSequenceState;
+      const auto epoch = sequence_epoch(direction, tcp.sequence, sequenceSpan);
       const SegmentKey key{fromClient, tcp.sequence, static_cast<std::size_t>(sequenceSpan),
                            syn,        fin,          payload_fingerprint(tcp.payload)};
       auto& candidates = segments[key];
       const auto prior = std::find_if(candidates.begin(), candidates.end(), [&](const auto& value) {
-        return same_payload(value.payload, tcp.payload);
+        return value.sequenceEpoch == epoch && same_payload(value.payload, tcp.payload);
       });
       if (prior != candidates.end()) {
         add_observation(capture, "tcp-retransmission-candidate",
                         "TCP segment appears to resend bytes already seen.",
                         {prior->packetNumber, parsed->packet.number});
       } else if (candidates.size() < kMaxPayloadHashCollisions) {
-        candidates.push_back({tcp.payload, parsed->packet.number});
+        candidates.push_back({tcp.payload, parsed->packet.number, epoch});
       } else {
         report_collision_limit(capture, state, parsed->packet.number);
       }
@@ -217,8 +251,10 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
       sawSyn && sawSynAck && sawFinalAck
           ? HandshakeState::complete
           : (firstHandshakePacket ? HandshakeState::partial : HandshakeState::unobserved);
-  state.flow.termination =
-      sawReset ? "reset" : (sawClientFin && sawServerFin ? "graceful" : "open-at-capture-end");
+  state.flow.termination = sawReset                       ? "reset"
+                           : sawClientFin && sawServerFin ? "graceful"
+                           : state.ambiguousReuse         ? "unknown"
+                                                          : "open-at-capture-end";
 
   if (firstResetPacket)
     add_observation(capture, "tcp-reset", "TCP reset was observed.", {*firstResetPacket});
@@ -226,7 +262,7 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
     add_observation(capture, "tcp-incomplete-handshake", "TCP handshake evidence was incomplete.",
                     {*firstHandshakePacket});
   }
-  if (state.flow.termination == "open-at-capture-end") {
+  if (state.flow.termination == "open-at-capture-end" || state.flow.termination == "unknown") {
     add_observation(capture, "tcp-connection-without-close",
                     "TCP connection had no observed close before the capture ended.",
                     boundary_evidence(state));
@@ -237,21 +273,21 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
 
 void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets) {
   std::vector<FlowState> states;
+  std::map<TupleKey, std::size_t> latestFlowByTuple;
+  std::map<std::tuple<std::string, std::string, std::uint16_t>, std::string> endpointIds;
   std::size_t tcpFlowCount = 0;
   std::size_t udpFlowCount = 0;
 
   const auto find_endpoint = [&](const std::string& address, const std::uint16_t port,
                                  const bool isUdp) {
     const auto protocol = isUdp ? "UDP" : "TCP";
-    const auto found = std::find_if(capture.endpoints.begin(), capture.endpoints.end(),
-                                    [&](const Endpoint& endpoint) {
-                                      return endpoint.address == address && endpoint.port == port &&
-                                             endpoint.protocol == protocol;
-                                    });
-    if (found != capture.endpoints.end())
-      return found->id;
+    const auto key = std::tuple{std::string(protocol), address, port};
+    const auto found = endpointIds.find(key);
+    if (found != endpointIds.end())
+      return found->second;
     const auto id = "endpoint-" + std::to_string(capture.endpoints.size() + 1);
     capture.endpoints.push_back({id, address, port, protocol, address_family(address)});
+    endpointIds.emplace(key, id);
     return id;
   };
 
@@ -266,15 +302,10 @@ void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets) {
     const auto sourcePort = isUdp ? udp.sourcePort : tcp.sourcePort;
     const auto destinationPort = isUdp ? udp.destinationPort : tcp.destinationPort;
     const auto startsTcp = !isUdp && has_flag(tcp.flags, kSyn) && !has_flag(tcp.flags, kAck);
+    const auto key = tuple_key(isUdp, source, destination, sourcePort, destinationPort);
 
-    auto stateIndex = states.size();
-    for (auto index = states.size(); index > 0; --index) {
-      if (tuple_matches(states[index - 1], isUdp, source, destination, sourcePort,
-                        destinationPort)) {
-        stateIndex = index - 1;
-        break;
-      }
-    }
+    const auto latest = latestFlowByTuple.find(key);
+    auto stateIndex = latest == latestFlowByTuple.end() ? states.size() : latest->second;
     if (stateIndex != states.size() && startsTcp && terminal(states[stateIndex]))
       stateIndex = states.size();
 
@@ -284,6 +315,8 @@ void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets) {
       state.firstTcp = tcp;
       state.firstUdp = udp;
       state.roleSetBySyn = startsTcp;
+      if (startsTcp)
+        state.initialSynSequence = tcp.sequence;
       state.flow.id = isUdp ? "udp-flow-" + std::to_string(++udpFlowCount)
                             : "tcp-flow-" + std::to_string(++tcpFlowCount);
       state.flow.protocol = isUdp ? "UDP" : "TCP";
@@ -294,15 +327,27 @@ void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets) {
       state.flow.startTimestampNs = parsed.packet.timestampNs;
       states.push_back(std::move(state));
       stateIndex = states.size() - 1;
+      latestFlowByTuple[key] = stateIndex;
     }
 
     auto& state = states[stateIndex];
-    if (startsTcp && !state.roleSetBySyn) {
+    if (startsTcp && state.roleSetBySyn && state.initialSynSequence &&
+        tcp.sequence != *state.initialSynSequence && !state.ambiguousReuse) {
+      state.ambiguousReuse = true;
+      if (capture.diagnostics.size() < kMaxDiagnostics) {
+        capture.diagnostics.push_back(
+            {"warning", "TCP_CONNECTION_REUSE_AMBIGUOUS",
+             "A new SYN used a different initial sequence before an observed close; packets "
+             "remain in one mid-stream flow",
+             state.flow.id, std::nullopt, parsed.packet.number, 1U});
+      }
+    } else if (startsTcp && !state.roleSetBySyn) {
       if (source != state.flow.client.address || sourcePort != state.flow.client.port) {
         std::swap(state.flow.client, state.flow.server);
         std::swap(state.flow.clientEndpointId, state.flow.serverEndpointId);
       }
       state.roleSetBySyn = true;
+      state.initialSynSequence = tcp.sequence;
     }
 
     const auto fromClient =

@@ -20,6 +20,15 @@ void add_observation(CaptureDocument& capture, std::string type, std::string mes
           {"warning", "OBSERVATION_LIMIT_REACHED",
            "Additional observations were omitted after the 1,024 observation limit", "observations",
            std::nullopt, std::nullopt, 1U});
+    } else {
+      capture.diagnostics.back() = {
+          "warning",
+          "OBSERVATION_LIMIT_REACHED",
+          "Additional observations were omitted after the 1,024 observation limit",
+          "observations",
+          std::nullopt,
+          std::nullopt,
+          1U};
     }
     return;
   }

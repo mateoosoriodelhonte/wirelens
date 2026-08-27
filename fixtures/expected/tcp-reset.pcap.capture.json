@@ -937,7 +937,7 @@
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.ack",
+              "explanationKey": "tcp.rst",
               "name": "flags",
               "value": "ACK, RST"
             },

@@ -77,7 +77,9 @@ describe('reviewed handshake golden document', () => {
 
   it('contains no sensitive or raw payload object keys', () => {
     const forbidden = /raw|payload|authorization|cookie|token|secret/i;
-    expect(objectKeys(readGolden()).filter((key) => forbidden.test(key))).toEqual([]);
+    for (const name of ['tcp-handshake', 'tcp-reset', 'tcp-retransmission']) {
+      expect(objectKeys(readFixtureGolden(name)).filter((key) => forbidden.test(key))).toEqual([]);
+    }
   });
 
   it('validates reviewed TCP reset and retransmission evidence', () => {

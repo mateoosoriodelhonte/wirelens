@@ -7,13 +7,8 @@
   "expectedFacts": {
     "handshake": "complete",
     "termination": "graceful",
-    "observationTypes": [
-      "tcp-retransmission-candidate"
-    ],
-    "retransmissionEvidence": [
-      4,
-      5
-    ]
+    "observationTypes": ["tcp-retransmission-candidate"],
+    "retransmissionEvidence": [4, 5]
   },
   "packets": [1, 2, 3, 4, 5, 6, 7]
 }

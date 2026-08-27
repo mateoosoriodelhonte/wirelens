@@ -148,8 +148,8 @@
     <nav class="section-nav" aria-label="Capture sections">
       <span>Jump to</span><a href={resolve('/#overview')}>Overview</a><a
         href={resolve('/#conversations')}>Conversations</a
-      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#packets')}>Packets</a>
-      <a href={resolve('/#observations')}>Observations</a>
+      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#observations')}>Observations</a>
+      <a href={resolve('/#packets')}>Packets</a>
     </nav>
   {/if}
   {#if document}

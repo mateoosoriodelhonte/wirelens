@@ -49,6 +49,18 @@ TEST_CASE("TCP direction uses the first packet when the capture begins mid strea
   REQUIRE(flow.handshake == wirelens::HandshakeState::unobserved);
 }
 
+TEST_CASE("TCP handshake sequence math includes SYN payload and 32 bit wrap") {
+  const auto byte = wirelens_test::byte_payload("x");
+  const auto payloadHandshake = parse(
+      {{true, 1000, 0, 0x02, byte}, {false, 5000, 1002, 0x12, byte}, {true, 1002, 5002, 0x10}});
+  REQUIRE(payloadHandshake.flows.front().handshake == wirelens::HandshakeState::complete);
+
+  const auto wrapped = parse({{true, 0xffff'ffffU, 0, 0x02},
+                              {false, 0xffff'fffeU, 0, 0x12},
+                              {true, 0, 0xffff'ffffU, 0x10}});
+  REQUIRE(wrapped.flows.front().handshake == wirelens::HandshakeState::complete);
+}
+
 TEST_CASE("TCP lifecycle records graceful and reset termination") {
   auto gracefulPackets = handshake();
   gracefulPackets.push_back({true, 1001, 5001, 0x11, {}, {}, {}, 30'000});
@@ -71,9 +83,8 @@ TEST_CASE("TCP lifecycle records graceful and reset termination") {
 }
 
 TEST_CASE("TCP four tuple reuse after a terminal state starts a new flow") {
-  const auto resetReuse = parse({{true, 1000, 0, 0x02},
-                                 {false, 5000, 1001, 0x14},
-                                 {true, 9000, 0, 0x02}});
+  const auto resetReuse =
+      parse({{true, 1000, 0, 0x02}, {false, 5000, 1001, 0x14}, {true, 9000, 0, 0x02}});
   REQUIRE(resetReuse.flows.size() == 2);
   REQUIRE(resetReuse.flows.at(0).termination == "reset");
   REQUIRE(resetReuse.flows.at(1).id == "tcp-flow-2");
@@ -87,6 +98,27 @@ TEST_CASE("TCP four tuple reuse after a terminal state starts a new flow") {
   REQUIRE(closeReuse.flows.size() == 2);
   REQUIRE(closeReuse.flows.at(0).termination == "graceful");
   REQUIRE(closeReuse.packets.back().flowId == "tcp-flow-2");
+}
+
+TEST_CASE("ambiguous active TCP tuple reuse stays in one limited mid stream flow") {
+  const auto capture = parse({{true, 1000, 0, 0x02}, {true, 9000, 0, 0x02}});
+  REQUIRE(capture.flows.size() == 1);
+  REQUIRE(capture.flows.front().midStream);
+  REQUIRE(capture.flows.front().termination == "unknown");
+  const auto diagnostic =
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
+        return value.code == "TCP_CONNECTION_REUSE_AMBIGUOUS";
+      });
+  REQUIRE(diagnostic != capture.diagnostics.end());
+  REQUIRE(diagnostic->packetNumber == 2);
+  REQUIRE(observation(capture, "tcp-connection-without-close") != nullptr);
+
+  const auto repeatedSyn = parse({{true, 1000, 0, 0x02}, {true, 1000, 0, 0x02}});
+  REQUIRE_FALSE(repeatedSyn.flows.front().midStream);
+  REQUIRE(repeatedSyn.flows.front().termination == "open-at-capture-end");
+  const auto* retransmission = observation(repeatedSyn, "tcp-retransmission-candidate");
+  REQUIRE(retransmission != nullptr);
+  REQUIRE(retransmission->packetNumbers == std::vector<std::size_t>{1, 2});
 }
 
 TEST_CASE("partial TCP handshake and open capture end produce neutral observations") {
@@ -125,7 +157,17 @@ TEST_CASE("TCP retransmission candidates handle an exact range across sequence w
   REQUIRE(retransmission->packetNumbers == std::vector<std::size_t>{1, 2});
 }
 
-TEST_CASE("TCP retransmission candidates reject overlap gaps bytes direction flags and truncation") {
+TEST_CASE("TCP sequence epoch change suppresses wrap-ambiguous retransmission evidence") {
+  const auto repeatedPayload = wirelens_test::byte_payload("wrap");
+  const auto laterPayload = wirelens_test::byte_payload("later");
+  const auto capture = parse({{true, 0xffff'fff0U, 0, 0x10, repeatedPayload},
+                              {true, 0x20U, 0, 0x10, laterPayload},
+                              {true, 0xffff'fff0U, 0, 0x10, repeatedPayload}});
+  REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
+}
+
+TEST_CASE(
+    "TCP retransmission candidates reject overlap gaps bytes direction flags and truncation") {
   SECTION("overlap and gap") {
     const auto capture = parse({{true, 100, 0, 0x10, wirelens_test::byte_payload("abcd")},
                                 {true, 100, 0, 0x10, wirelens_test::byte_payload("abc")},
@@ -145,8 +187,14 @@ TEST_CASE("TCP retransmission candidates reject overlap gaps bytes direction fla
   }
   SECTION("capture and IP truncation") {
     const auto payload = wirelens_test::byte_payload("ab");
-    const auto capture = parse({{true, 100, 0, 0x10, payload, 4, 58},
-                                {true, 100, 0, 0x10, payload, 4, 58}});
+    const auto capture =
+        parse({{true, 100, 0, 0x10, payload, 4, 58}, {true, 100, 0, 0x10, payload, 4, 58}});
+    REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
+  }
+  SECTION("first IP fragments") {
+    const auto payload = wirelens_test::byte_payload("ab");
+    const auto capture = parse({{true, 100, 0, 0x10, payload, {}, {}, 0, true},
+                                {true, 100, 0, 0x10, payload, {}, {}, 1, true}});
     REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
   }
 }
@@ -160,10 +208,29 @@ TEST_CASE("TCP observation count has an exact global boundary") {
   packets.push_back({false, 5001, 1003, 0x11});
   const auto capture = parse(packets);
   REQUIRE(capture.observations.size() == wirelens::kMaxObservations);
-  const auto diagnostic = std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
-                                       [](const auto& value) {
-                                         return value.code == "OBSERVATION_LIMIT_REACHED";
-                                       });
+  const auto diagnostic =
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
+                   [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
   REQUIRE(diagnostic != capture.diagnostics.end());
   REQUIRE(diagnostic->count == 1);
+}
+
+TEST_CASE("TCP observation limit remains visible when the diagnostic limit is already full") {
+  std::vector<TcpPacketSpec> packets;
+  packets.reserve(wirelens::kMaxDiagnostics * 2U);
+  for (std::size_t index = 0; index < wirelens::kMaxDiagnostics; ++index) {
+    const auto clientPort = static_cast<std::uint16_t>(10'000U + index);
+    packets.emplace_back(true, 1000, 0, 0x02, std::vector<std::byte>{}, std::nullopt, std::nullopt,
+                         0, false, clientPort, 443);
+    packets.emplace_back(true, 9000, 0, 0x02, std::vector<std::byte>{}, std::nullopt, std::nullopt,
+                         1, false, clientPort, 443);
+  }
+  const auto capture = parse(packets);
+  REQUIRE(capture.diagnostics.size() == wirelens::kMaxDiagnostics);
+  const auto diagnostic =
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
+                   [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
+  REQUIRE(diagnostic != capture.diagnostics.end());
+  REQUIRE(diagnostic->count.has_value());
+  REQUIRE(*diagnostic->count > 0U);
 }

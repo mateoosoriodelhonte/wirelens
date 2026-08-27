@@ -124,7 +124,7 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     }
     packet.packet.summary =
         packet.tcp.valid
-            ? internal::flag_text(packet.tcp.flags)
+            ? (packet.tcp.payload.empty() ? internal::flag_text(packet.tcp.flags) : "TCP data")
             : (packet.udp.valid
                    ? "UDP datagram"
                    : (packet.packet.layers.empty() ? "Truncated frame" : "Ethernet frame"));

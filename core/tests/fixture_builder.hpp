@@ -99,12 +99,14 @@ struct TcpPacketSpec {
                 std::vector<std::byte> payloadValue = {},
                 std::optional<std::size_t> declaredPayloadLengthValue = {},
                 std::optional<std::size_t> originalFrameLengthValue = {},
-                std::uint32_t timestampMicrosecondsValue = 0)
+                std::uint32_t timestampMicrosecondsValue = 0, bool moreFragmentsValue = false,
+                std::uint16_t clientPortValue = 51515, std::uint16_t serverPortValue = 443)
       : clientToServer(clientToServerValue), sequence(sequenceValue),
         acknowledgment(acknowledgmentValue), flags(flagsValue), payload(std::move(payloadValue)),
         declaredPayloadLength(declaredPayloadLengthValue),
         originalFrameLength(originalFrameLengthValue),
-        timestampMicroseconds(timestampMicrosecondsValue) {}
+        timestampMicroseconds(timestampMicrosecondsValue), moreFragments(moreFragmentsValue),
+        clientPort(clientPortValue), serverPort(serverPortValue) {}
 
   bool clientToServer = true;
   std::uint32_t sequence = 0;
@@ -114,6 +116,9 @@ struct TcpPacketSpec {
   std::optional<std::size_t> declaredPayloadLength;
   std::optional<std::size_t> originalFrameLength;
   std::uint32_t timestampMicroseconds = 0;
+  bool moreFragments = false;
+  std::uint16_t clientPort = 51515;
+  std::uint16_t serverPort = 443;
 };
 
 inline std::vector<std::byte> byte_payload(const std::string_view value) {
@@ -173,6 +178,8 @@ inline std::vector<std::byte> build_tcp_capture(const std::span<const TcpPacketS
     put16be(bytes, ip + 2,
             static_cast<std::uint16_t>(ipv4Length + tcpLength + declaredPayloadLength));
     put16be(bytes, ip + 4, static_cast<std::uint16_t>(index + 1));
+    if (packet.moreFragments)
+      put16be(bytes, ip + 6, 0x2000U);
     bytes[ip + 8] = std::byte{64};
     bytes[ip + 9] = std::byte{6};
     const auto& sourceIp = packet.clientToServer ? clientIp : serverIp;
@@ -183,8 +190,8 @@ inline std::vector<std::byte> build_tcp_capture(const std::span<const TcpPacketS
     }
 
     const auto tcp = ip + ipv4Length;
-    put16be(bytes, tcp, packet.clientToServer ? 51515 : 443);
-    put16be(bytes, tcp + 2, packet.clientToServer ? 443 : 51515);
+    put16be(bytes, tcp, packet.clientToServer ? packet.clientPort : packet.serverPort);
+    put16be(bytes, tcp + 2, packet.clientToServer ? packet.serverPort : packet.clientPort);
     put32be(bytes, tcp + 4, packet.sequence);
     put32be(bytes, tcp + 8, packet.acknowledgment);
     bytes[tcp + 12] = std::byte{0x50};

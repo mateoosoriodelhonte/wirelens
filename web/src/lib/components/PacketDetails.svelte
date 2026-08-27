@@ -15,9 +15,15 @@
       ? 'Synchronize sequence numbers to begin a connection.'
       : key === 'tcp.syn-ack' || (key === null && fallback === 'SYN + ACK')
         ? 'The server accepts and acknowledges the client request.'
-        : key === 'tcp.ack' || (key === null && fallback === 'ACK')
-          ? 'The client acknowledges the server and completes the handshake.'
-          : 'This field describes evidence in the selected protocol layer.';
+        : key === 'tcp.rst' || (key === null && fallback?.includes('RST'))
+          ? 'This endpoint stopped the TCP connection.'
+          : key === 'tcp.fin' || (key === null && fallback?.includes('FIN'))
+            ? 'This endpoint asked to close the TCP connection.'
+            : key === 'tcp.data'
+              ? 'This packet carries TCP payload bytes.'
+              : key === 'tcp.ack' || (key === null && fallback === 'ACK')
+                ? 'This packet acknowledges TCP sequence data.'
+                : 'This field describes evidence in the selected protocol layer.';
   };
 </script>
 

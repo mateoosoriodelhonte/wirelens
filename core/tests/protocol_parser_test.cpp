@@ -84,6 +84,19 @@ TEST_CASE("a non-first IPv4 fragment is not decoded as TCP") {
   REQUIRE(capture.flows.at(0).packetNumbers == std::vector<std::size_t>{2, 3});
 }
 
+TEST_CASE("TCP reset and data packets use exact summaries and learning keys") {
+  const std::vector<wirelens_test::TcpPacketSpec> packetSpecs{
+      {true, 1000, 0, 0x14}, {true, 1001, 0, 0x10, wirelens_test::byte_payload("data")}};
+  const auto bytes = wirelens_test::build_tcp_capture(packetSpecs);
+  const auto result = wirelens::parse_capture(bytes);
+  REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+  const auto& packets = std::get<wirelens::CaptureDocument>(result).packets;
+  REQUIRE(packets.at(0).summary == "ACK, RST");
+  REQUIRE(packets.at(0).layers.at(2).fields.at(5).explanationKey == "tcp.rst");
+  REQUIRE(packets.at(1).summary == "TCP data");
+  REQUIRE(packets.at(1).layers.at(2).fields.at(5).explanationKey == "tcp.data");
+}
+
 TEST_CASE("stacked VLAN tags stop at the named nesting limit") {
   SECTION("the exact boundary is accepted") {
     const auto result = wirelens::parse_capture(build_vlan_capture(wirelens::kMaxVlanTags));
