@@ -1,6 +1,6 @@
 # WireLens V1 Design
 
-Status: Proposed. James approved the architecture direction on 2026-08-27. The written specification still needs review.
+Status: Accepted. James approved the architecture direction and written specification on 2026-08-27.
 
 Date: 2026-08-27
 
