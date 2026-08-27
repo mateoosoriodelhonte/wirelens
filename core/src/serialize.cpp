@@ -65,10 +65,11 @@ std::string serialize_capture(const CaptureDocument& capture) {
                        {"durationNs", capture.capture.durationNs}};
   result["capture"]["interfaces"] = json::array();
   for (const auto& interface : capture.capture.interfaces)
-    result["capture"]["interfaces"].push_back({{"id", interface.id},
-                                                 {"linkType", interface.linkType},
-                                                 {"snapLength", interface.snapLength},
-                                                 {"timestampResolution", interface.timestampResolution}});
+    result["capture"]["interfaces"].push_back(
+        {{"id", interface.id},
+         {"linkType", interface.linkType},
+         {"snapLength", interface.snapLength},
+         {"timestampResolution", interface.timestampResolution}});
   result["endpoints"] = json::array();
   for (const auto& endpoint : capture.endpoints) {
     result["endpoints"].push_back({{"id", endpoint.id},

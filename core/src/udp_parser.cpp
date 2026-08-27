@@ -36,8 +36,8 @@ std::optional<ProtocolLayer> decode_udp(const std::span<const std::byte> payload
   add_field(layer, "destinationPort", std::to_string(u16be(payload, 2)), captureOffset,
             packetOffset + 2, 2);
   add_field(layer, "length", std::to_string(length), captureOffset, packetOffset + 4, 2);
-  add_field(layer, "checksum", std::to_string(u16be(payload, 6)), captureOffset,
-            packetOffset + 6, 2);
+  add_field(layer, "checksum", std::to_string(u16be(payload, 6)), captureOffset, packetOffset + 6,
+            2);
   facts = {true, {}, {}, u16be(payload, 0), u16be(payload, 2), length - 8};
   return layer;
 }

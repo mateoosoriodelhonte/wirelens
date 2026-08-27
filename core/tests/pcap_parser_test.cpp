@@ -152,6 +152,28 @@ std::vector<std::byte> build_pcapng_empty_packets(const std::size_t packetCount)
   return bytes;
 }
 
+std::vector<std::byte> build_pcapng_interfaces(const std::size_t interfaceCount) {
+  constexpr std::size_t blockLength = 20;
+  std::vector<std::byte> bytes(28U + interfaceCount * blockLength, std::byte{0});
+  wirelens_test::put32le(bytes, 0, 0x0a0d0d0a);
+  wirelens_test::put32le(bytes, 4, 28);
+  bytes[8] = std::byte{0x4d};
+  bytes[9] = std::byte{0x3c};
+  bytes[10] = std::byte{0x2b};
+  bytes[11] = std::byte{0x1a};
+  bytes[12] = std::byte{1};
+  wirelens_test::put32le(bytes, 24, 28);
+  for (std::size_t i = 0; i < interfaceCount; ++i) {
+    const auto offset = 28U + i * blockLength;
+    wirelens_test::put32le(bytes, offset, 1);
+    wirelens_test::put32le(bytes, offset + 4, blockLength);
+    wirelens_test::put16(bytes, offset + 8, 1);
+    wirelens_test::put32le(bytes, offset + 12, 0);
+    wirelens_test::put32le(bytes, offset + 16, blockLength);
+  }
+  return bytes;
+}
+
 std::vector<std::byte> build_ipv6_variant(const std::vector<std::uint8_t>& extensionTypes,
                                           const std::uint8_t transport,
                                           const std::size_t transportLength = 8,
@@ -358,6 +380,63 @@ TEST_CASE("parse_capture accepts all classic magic and byte orders") {
     }
     const auto result = wirelens::parse_capture(bytes);
     REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+  }
+}
+
+TEST_CASE("classic PCAP validates snap length and timestamp fractions") {
+  SECTION("the header snap length is read from bytes 16 through 19") {
+    const auto result = wirelens::parse_capture(wirelens_test::build_handshake());
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+    REQUIRE(std::get<wirelens::CaptureDocument>(result).capture.interfaces.at(0).snapLength ==
+            65'535U);
+  }
+
+  SECTION("captured length at the snap length is accepted") {
+    auto bytes = wirelens_test::build_handshake();
+    wirelens_test::put32le(bytes, 16, 54);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(wirelens::parse_capture(bytes)));
+  }
+
+  SECTION("captured length above a nonzero snap length is rejected") {
+    auto bytes = wirelens_test::build_handshake();
+    wirelens_test::put32le(bytes, 16, 53);
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::ParseError>(result));
+    REQUIRE(std::get<wirelens::ParseError>(result).code == "PCAP_PACKET_EXCEEDS_SNAPLEN");
+  }
+
+  SECTION("microsecond fractions below one second are accepted") {
+    auto bytes = wirelens_test::build_handshake();
+    wirelens_test::put32le(bytes, 28, 999'999U);
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+    REQUIRE(std::get<wirelens::CaptureDocument>(result).packets.at(0).timestampNs == "1999999000");
+  }
+
+  SECTION("one million microseconds is rejected") {
+    auto bytes = wirelens_test::build_handshake();
+    wirelens_test::put32le(bytes, 28, 1'000'000U);
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::ParseError>(result));
+    REQUIRE(std::get<wirelens::ParseError>(result).code == "INVALID_TIMESTAMP");
+    REQUIRE(std::get<wirelens::ParseError>(result).captureOffset == 28U);
+  }
+
+  SECTION("nanosecond fractions use the same strict boundary") {
+    auto bytes = wirelens_test::build_handshake();
+    bytes[0] = std::byte{0x4d};
+    bytes[1] = std::byte{0x3c};
+    bytes[2] = std::byte{0xb2};
+    bytes[3] = std::byte{0xa1};
+    wirelens_test::put32le(bytes, 28, 999'999'999U);
+    const auto accepted = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(accepted));
+    REQUIRE(std::get<wirelens::CaptureDocument>(accepted).packets.at(0).timestampNs ==
+            "1999999999");
+    wirelens_test::put32le(bytes, 28, 1'000'000'000U);
+    const auto rejected = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::ParseError>(rejected));
+    REQUIRE(std::get<wirelens::ParseError>(rejected).code == "INVALID_TIMESTAMP");
   }
 }
 
@@ -606,6 +685,21 @@ TEST_CASE("PCAPNG enforces the named block limit") {
   const auto rejected = wirelens::parse_capture(bytes);
   REQUIRE(std::holds_alternative<wirelens::ParseError>(rejected));
   REQUIRE(std::get<wirelens::ParseError>(rejected).code == "PCAPNG_BLOCK_LIMIT_EXCEEDED");
+}
+
+TEST_CASE("PCAPNG enforces the named interface limit") {
+  const auto accepted =
+      wirelens::parse_capture(build_pcapng_interfaces(wirelens::kMaxPcapngInterfaces));
+  REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(accepted));
+  REQUIRE(std::get<wirelens::CaptureDocument>(accepted).capture.interfaces.size() ==
+          wirelens::kMaxPcapngInterfaces);
+
+  const auto rejected =
+      wirelens::parse_capture(build_pcapng_interfaces(wirelens::kMaxPcapngInterfaces + 1U));
+  REQUIRE(std::holds_alternative<wirelens::ParseError>(rejected));
+  const auto& error = std::get<wirelens::ParseError>(rejected);
+  REQUIRE(error.code == "PCAPNG_INTERFACE_LIMIT_EXCEEDED");
+  REQUIRE(error.captureOffset == 28U + wirelens::kMaxPcapngInterfaces * 20U);
 }
 
 TEST_CASE("PCAPNG sections reset local interface references") {

@@ -34,12 +34,14 @@ int main(int argc, char** argv) {
   }
   {
     auto project = std::filesystem::current_path();
-    for (std::size_t levels = 0; levels < 8 && !std::filesystem::exists(project / "fixtures/generated/ipv6-udp.pcapng"); ++levels)
+    for (std::size_t levels = 0;
+         levels < 8 && !std::filesystem::exists(project / "fixtures/generated/ipv6-udp.pcapng");
+         ++levels)
       project = project.parent_path();
     if (!std::filesystem::exists(project / "fixtures/generated/ipv6-udp.pcapng"))
       return 8;
     std::filesystem::copy_file(project / "fixtures/generated/ipv6-udp.pcapng", pcapng,
-                                std::filesystem::copy_options::overwrite_existing);
+                               std::filesystem::copy_options::overwrite_existing);
   }
   {
     std::ofstream output(malformed, std::ios::binary);

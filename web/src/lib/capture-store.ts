@@ -50,8 +50,10 @@ const parseErrorCodes = new Set<ParseError['code']>([
   'INVALID_PCAPNG_INTERFACE',
   'INVALID_PCAPNG_PACKET_LENGTH',
   'PCAPNG_BLOCK_LIMIT_EXCEEDED',
+  'PCAPNG_INTERFACE_LIMIT_EXCEEDED',
   'PCAPNG_SECTION_REQUIRED',
   'PCAPNG_PACKET_EXCEEDS_SNAPLEN',
+  'PCAP_PACKET_EXCEEDS_SNAPLEN',
 ]);
 
 function asParseError(reason: unknown): ParseError {

@@ -8,7 +8,7 @@
       {
         "id": 0,
         "linkType": 1,
-        "snapLength": 0,
+        "snapLength": 65535,
         "timestampResolution": "nanoseconds"
       }
     ],

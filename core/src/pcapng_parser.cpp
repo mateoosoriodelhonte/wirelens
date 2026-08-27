@@ -127,6 +127,9 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
     if (blockType == kInterfaceDescription) {
       if (length < 20)
         return error("TRUNCATED_PCAPNG_INTERFACE", "PCAPNG interface block is truncated", offset);
+      if (capture.capture.interfaces.size() >= kMaxPcapngInterfaces)
+        return error("PCAPNG_INTERFACE_LIMIT_EXCEEDED", "PCAPNG exceeds the 65,536 interface limit",
+                     offset);
       const auto linkType = u16(bytes, offset + 8, little);
       const auto snapLength = u32(bytes, offset + 12, little);
       if (linkType != 1)

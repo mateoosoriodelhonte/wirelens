@@ -105,8 +105,9 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
         return layer;
       const auto extension = payload.subspan(offset, 8);
       add_field(layer, "extensionType", "Fragment", captureOffset, packetOffset + offset, 1);
-      add_field(layer, "extensionNextHeader", std::to_string(std::to_integer<unsigned>(extension[0])),
-                captureOffset, packetOffset + offset, 1);
+      add_field(layer, "extensionNextHeader",
+                std::to_string(std::to_integer<unsigned>(extension[0])), captureOffset,
+                packetOffset + offset, 1);
       add_field(layer, "extensionLength", "8", captureOffset, packetOffset + offset + 1, 1);
       const auto fragment = u16be(extension, 2);
       const auto fragmentOffset = static_cast<unsigned>(fragment >> 3U);
@@ -126,24 +127,29 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
     }
     if (payload.size() - offset < 2)
       return layer;
-    const auto extensionLength = (static_cast<std::size_t>(std::to_integer<unsigned>(payload[offset + 1])) + 1U) * 8U;
-    if (extensionLength > payload.size() - offset || extensionLength > 40U + boundedPayload - offset)
+    const auto extensionLength =
+        (static_cast<std::size_t>(std::to_integer<unsigned>(payload[offset + 1])) + 1U) * 8U;
+    if (extensionLength > payload.size() - offset ||
+        extensionLength > 40U + boundedPayload - offset)
       return layer;
-    const auto extensionName = next == 0 ? "Hop-by-Hop Options"
-                              : (next == 43 ? "Routing" : "Destination Options");
+    const auto extensionName =
+        next == 0 ? "Hop-by-Hop Options" : (next == 43 ? "Routing" : "Destination Options");
     add_field(layer, "extensionType", extensionName, captureOffset, packetOffset + offset, 1);
-    add_field(layer, "extensionNextHeader", std::to_string(std::to_integer<unsigned>(payload[offset])),
-              captureOffset, packetOffset + offset, 1);
+    add_field(layer, "extensionNextHeader",
+              std::to_string(std::to_integer<unsigned>(payload[offset])), captureOffset,
+              packetOffset + offset, 1);
     add_field(layer, "extensionLength", std::to_string(extensionLength), captureOffset,
               packetOffset + offset + 1, 1);
     next = std::to_integer<unsigned>(payload[offset]);
     offset += extensionLength;
   }
-  if (extensionCount == kMaxIpv6ExtensionHeaders && (next == 0 || next == 43 || next == 44 || next == 60)) {
+  if (extensionCount == kMaxIpv6ExtensionHeaders &&
+      (next == 0 || next == 43 || next == 44 || next == 60)) {
     packet.analysisFlags.push_back("ipv6-extension-limit");
     return layer;
   }
-  if (next == 0 || next == 43 || next == 44 || next == 60 || nonFirstFragment || offset > 40U + boundedPayload)
+  if (next == 0 || next == 43 || next == 44 || next == 60 || nonFirstFragment ||
+      offset > 40U + boundedPayload)
     return layer;
   const auto transport = payload.subspan(offset, 40U + boundedPayload - offset);
   if (next == 6) {

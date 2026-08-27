@@ -49,7 +49,8 @@ std::vector<PacketRange> packet_ranges(const Result& result) {
     return {};
   ranges.reserve(document.packetSourceRanges.size());
   for (const auto& source : document.packetSourceRanges) {
-    if (source.captureOffset > result.inputSize || source.length > result.inputSize - source.captureOffset)
+    if (source.captureOffset > result.inputSize ||
+        source.length > result.inputSize - source.captureOffset)
       return {};
     ranges.push_back({source.captureOffset, source.length});
   }
