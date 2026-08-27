@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { validateCaptureDocument } from '@wirelens/schema';
 import { demoDocument } from './demo-document';
 
 const keys = (value: object) => Object.keys(value).sort();
 
 describe('demoDocument contract shape', () => {
+  it('validates against the shared runtime schema', () => {
+    expect(validateCaptureDocument(demoDocument)).toBe(demoDocument);
+  });
+
   it('contains only the transport fields defined by the Task 2 contract', () => {
     expect(keys(demoDocument)).toEqual([
       'capture',
