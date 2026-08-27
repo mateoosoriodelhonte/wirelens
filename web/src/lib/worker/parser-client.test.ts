@@ -27,7 +27,10 @@ const validFile = (name = 'capture.pcap', size = 3) =>
     arrayBuffer: async () => new Uint8Array(size).buffer,
   });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('ParserClient', () => {
   it('transfers the file buffer and resolves a validated document', async () => {
@@ -51,6 +54,24 @@ describe('ParserClient', () => {
     });
     await expect(promise).resolves.toBe(demoDocument);
     await client.dispose();
+  });
+
+  it('constructs the browser worker with a statically analyzable module URL', async () => {
+    const constructorArgs: unknown[] = [];
+    class BrowserWorker extends FakeWorker {
+      constructor(...args: unknown[]) {
+        super();
+        constructorArgs.push(...args);
+      }
+    }
+    vi.stubGlobal('Worker', BrowserWorker);
+    const client = new ParserClient();
+    const promise = client.parse(validFile());
+    await vi.waitFor(() => expect(constructorArgs).toHaveLength(2));
+    expect(constructorArgs[0]).toBeInstanceOf(URL);
+    expect(constructorArgs[1]).toEqual({ type: 'module' });
+    await client.dispose();
+    await expect(promise).rejects.toBeInstanceOf(ParseCancelledError);
   });
 
   it('rejects an unsupported extension before reading the file or creating a worker', async () => {
@@ -107,6 +128,25 @@ describe('ParserClient', () => {
     await expect(parse).rejects.toMatchObject({ code: 'TRUNCATED_GLOBAL_HEADER' });
     expect(client.pendingRequestCount).toBe(0);
     await expect(client.getPacketBytes(0)).rejects.toThrow('No capture is open');
+    await client.dispose();
+  });
+
+  it('clears the active parse after a malformed response', async () => {
+    const workers: FakeWorker[] = [];
+    const client = new ParserClient({
+      workerFactory: () => {
+        const worker = new FakeWorker();
+        workers.push(worker);
+        return worker;
+      },
+    });
+    const first = client.parse(validFile());
+    await vi.waitFor(() => expect(workers).toHaveLength(1));
+    const requestId = (workers[0].messages[0].message as Extract<WorkerRequest, { type: 'parse' }>)
+      .requestId;
+    workers[0].respond({ type: 'unknown', requestId } as unknown as WorkerResponse);
+    await expect(first).rejects.toThrow(/malformed response/i);
+    expect(client.pendingRequestCount).toBe(0);
     await client.dispose();
   });
 

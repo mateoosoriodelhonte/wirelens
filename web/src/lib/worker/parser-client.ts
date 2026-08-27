@@ -45,7 +45,7 @@ interface ParserWorker {
   terminate(): void;
 }
 
-export type WorkerFactory = (url: string, options: { type: 'module' }) => ParserWorker;
+export type WorkerFactory = (url?: string, options?: { type: 'module' }) => ParserWorker;
 
 export interface ParserClientOptions {
   workerFactory?: WorkerFactory;
@@ -53,6 +53,7 @@ export interface ParserClientOptions {
 }
 
 interface PendingRequest<T> {
+  kind: 'parse' | 'packet-bytes';
   resolve: (value: T) => void;
   reject: (reason?: unknown) => void;
 }
@@ -62,12 +63,10 @@ interface ParseOperation {
   reject: (reason?: unknown) => void;
 }
 
-const defaultWorkerFactory: WorkerFactory = (url, options) =>
-  new Worker(url, options) as unknown as ParserWorker;
-
-function defaultWorkerUrl(): string {
-  return new URL('./capture.worker.ts', import.meta.url).href;
-}
+const defaultWorkerFactory: WorkerFactory = () =>
+  new Worker(new URL('./capture.worker.ts', import.meta.url), {
+    type: 'module',
+  }) as unknown as ParserWorker;
 
 function inputError(file: Pick<File, 'name' | 'size'>): ParserInputError | null {
   if (!file.name.toLowerCase().endsWith('.pcap')) {
@@ -90,7 +89,7 @@ export class ParserClient {
 
   constructor(options: ParserClientOptions = {}) {
     this.workerFactory = options.workerFactory ?? defaultWorkerFactory;
-    this.workerUrl = options.workerUrl ?? defaultWorkerUrl();
+    this.workerUrl = options.workerUrl ?? '';
   }
 
   get pendingRequestCount(): number {
@@ -120,7 +119,11 @@ export class ParserClient {
     if (!this.worker || !this.hasCapture) return Promise.reject(new Error('No capture is open'));
     const requestId = this.newRequestId();
     return new Promise<ArrayBuffer>((resolve, reject) => {
-      this.pending.set(requestId, { resolve: (value) => resolve(value as ArrayBuffer), reject });
+      this.pending.set(requestId, {
+        kind: 'packet-bytes',
+        resolve: (value) => resolve(value as ArrayBuffer),
+        reject,
+      });
       try {
         this.worker?.postMessage({ type: 'packet-bytes', requestId, packetIndex });
       } catch (error) {
@@ -172,6 +175,7 @@ export class ParserClient {
 
       const requestId = this.newRequestId();
       this.pending.set(requestId, {
+        kind: 'parse',
         resolve: (value) => resolve(value as CaptureDocument),
         reject,
       });
@@ -263,6 +267,7 @@ export class ParserClient {
     if (!request) return;
     this.pending.delete(requestId);
     request.resolve(value);
+    if (request.kind === 'parse') this.activeParse = null;
   }
 
   private rejectPending(requestId: string, error: unknown): void {
@@ -270,6 +275,7 @@ export class ParserClient {
     if (!request) return;
     this.pending.delete(requestId);
     request.reject(error);
+    if (request.kind === 'parse') this.activeParse = null;
   }
 
   private newRequestId(): string {

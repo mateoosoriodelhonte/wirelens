@@ -83,6 +83,13 @@ describe('capture worker with the generated Emscripten module', () => {
     if (packet.response.type !== 'packet-bytes') return;
     expect(new Uint8Array(packet.response.buffer).byteLength).toBe(54);
 
+    harness.send({ type: 'packet-bytes', requestId: 'request-bad-index', packetIndex: 99 });
+    const badIndex = await waitForResponse(harness, 'request-bad-index');
+    expect(badIndex.response).toMatchObject({
+      type: 'failed',
+      error: { code: 'TRUNCATED_PACKET_DATA' },
+    });
+
     harness.send({ type: 'release', requestId: 'request-release' });
     harness.send({ type: 'packet-bytes', requestId: 'request-after-release', packetIndex: 0 });
     const failed = await waitForResponse(harness, 'request-after-release');
@@ -133,7 +140,7 @@ describe('capture worker with the generated Emscripten module', () => {
     expect(releases).toEqual([1]);
   });
 
-  it('does not return an empty success for an invalid packet index', async () => {
+  it('reports a packet request when no capture is open', async () => {
     const harness = new WorkerHarness();
     const module = fakeModule({
       wirelens_result_ok: () => 1,
