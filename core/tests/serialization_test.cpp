@@ -14,6 +14,9 @@ TEST_CASE("serialization emits a stable sanitized capture document") {
   REQUIRE(json.find("\"contractVersion\": \"2.0.0\"") != std::string::npos);
   REQUIRE(json.find("packet-1") != std::string::npos);
   REQUIRE(json.find("tcp-flow-1") != std::string::npos);
+  REQUIRE(json.find("\"midStream\": false") != std::string::npos);
+  REQUIRE(json.find("TCP connection had no observed close before the capture ended.") !=
+          std::string::npos);
   REQUIRE(json.find("rawBytes") == std::string::npos);
   REQUIRE(json.find("payload") == std::string::npos);
   REQUIRE(json.find("\"context\": \"packet\"") != std::string::npos);

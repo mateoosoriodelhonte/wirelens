@@ -61,8 +61,8 @@ std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payloa
   if (fragmentOffset == 0) {
     const auto transport = payload.subspan(headerLength, boundedLength - headerLength);
     if (protocol == 6) {
-      if (const auto layer =
-              decode_tcp(transport, captureOffset, packetOffset + headerLength, tcp)) {
+      if (const auto layer = decode_tcp(transport, captureOffset, packetOffset + headerLength,
+                                        totalLength <= payload.size(), tcp)) {
         packet.sourcePort = tcp.sourcePort;
         packet.destinationPort = tcp.destinationPort;
         packet.layers.push_back(*layer);

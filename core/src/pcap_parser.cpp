@@ -112,6 +112,8 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     auto protocolDiagnostic =
         internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
                                   packet.tcp, packet.udp, packet.dns);
+    if (packet.tcp.valid && *captured < *original)
+      packet.tcp.payloadComplete = false;
     if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
       protocolDiagnostic->packetNumber = number;
       capture.diagnostics.push_back(std::move(*protocolDiagnostic));

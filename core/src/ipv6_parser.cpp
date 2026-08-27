@@ -153,7 +153,8 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
     return layer;
   const auto transport = payload.subspan(offset, 40U + boundedPayload - offset);
   if (next == 6) {
-    if (const auto tcpLayer = decode_tcp(transport, captureOffset, packetOffset + offset, tcp)) {
+    if (const auto tcpLayer = decode_tcp(transport, captureOffset, packetOffset + offset,
+                                         declaredPayload <= payload.size() - 40U, tcp)) {
       packet.sourcePort = tcp.sourcePort;
       packet.destinationPort = tcp.destinationPort;
       tcp.source = source;

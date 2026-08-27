@@ -119,6 +119,7 @@ std::string serialize_capture(const CaptureDocument& capture) {
               {"originalBytes", flow.originalBytes}};
     if (flow.protocol == "TCP") {
       item["handshake"] = handshake_text(flow.handshake);
+      item["midStream"] = flow.midStream;
       item["termination"] = flow.termination;
       item["events"] = json::array();
       for (const auto& event : flow.events)

@@ -55,6 +55,7 @@
       ],
       "handshake": "complete",
       "id": "tcp-flow-1",
+      "midStream": false,
       "originalBytes": 162,
       "packetNumbers": [1, 2, 3],
       "protocol": "TCP",
@@ -63,7 +64,15 @@
       "termination": "open-at-capture-end"
     }
   ],
-  "observations": [],
+  "observations": [
+    {
+      "id": "observation-1",
+      "limitation": "Only packets in this capture were considered.",
+      "message": "TCP connection had no observed close before the capture ended.",
+      "packetNumbers": [1, 3],
+      "type": "tcp-connection-without-close"
+    }
+  ],
   "packets": [
     {
       "analysisFlags": [],

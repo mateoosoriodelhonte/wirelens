@@ -18,6 +18,9 @@ struct TcpFacts {
   std::uint32_t sequence = 0;
   std::uint32_t acknowledgment = 0;
   std::uint8_t flags = 0;
+  std::size_t headerLength = 0;
+  std::span<const std::byte> payload;
+  bool payloadComplete = false;
 };
 
 struct UdpFacts {
@@ -55,7 +58,7 @@ struct ParsedPacket {
 
 std::optional<ProtocolLayer> decode_tcp(std::span<const std::byte> payload,
                                         std::size_t captureOffset, std::size_t packetOffset,
-                                        TcpFacts& facts);
+                                        bool payloadComplete, TcpFacts& facts);
 std::optional<ProtocolLayer> decode_ipv4(std::span<const std::byte> payload,
                                          std::size_t captureOffset, std::size_t packetOffset,
                                          TcpFacts& tcp, UdpFacts& udp, DnsFacts& dns,
@@ -75,6 +78,8 @@ std::optional<Diagnostic> decode_ethernet(std::span<const std::byte> frame,
                                           UdpFacts& udp, DnsFacts& dns);
 void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 void build_dns(CaptureDocument& capture, const std::vector<ParsedPacket>& packets);
+void add_observation(CaptureDocument& capture, std::string type, std::string message,
+                     std::vector<std::size_t> packetNumbers);
 std::string flag_text(std::uint8_t flags);
 
 } // namespace wirelens::internal

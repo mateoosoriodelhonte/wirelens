@@ -5,6 +5,7 @@ add_executable(wirelens_tests
   protocol_parser_test.cpp
   dns_parser_test.cpp
   flow_builder_test.cpp
+  tcp_lifecycle_test.cpp
   serialization_test.cpp)
 target_link_libraries(wirelens_tests PRIVATE wirelens_core Catch2::Catch2WithMain)
 target_compile_features(wirelens_tests PRIVATE cxx_std_20)

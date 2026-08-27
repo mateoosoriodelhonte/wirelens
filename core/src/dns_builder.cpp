@@ -70,27 +70,6 @@ std::string response_code(const std::uint8_t code) {
   }
 }
 
-void add_observation(CaptureDocument& capture, std::string type, std::string message,
-                     std::vector<std::size_t> packetNumbers) {
-  if (capture.observations.size() >= kMaxObservations) {
-    const auto existing =
-        std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
-                     [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
-    if (existing != capture.diagnostics.end()) {
-      existing->count = existing->count.value_or(0U) + 1U;
-    } else if (capture.diagnostics.size() < kMaxDiagnostics) {
-      capture.diagnostics.push_back(
-          {"warning", "OBSERVATION_LIMIT_REACHED",
-           "Additional observations were omitted after the 1,024 observation limit", "observations",
-           std::nullopt, std::nullopt, 1U});
-    }
-    return;
-  }
-  capture.observations.push_back({"observation-" + std::to_string(capture.observations.size() + 1),
-                                  std::move(type), std::move(message), std::move(packetNumbers),
-                                  "Only packets in this capture were considered."});
-}
-
 bool at_least_three_times(const std::uint64_t candidate, const std::uint64_t medianLow,
                           const std::uint64_t medianHigh) {
   // Compare 2*candidate >= 3*(low+high), which is the exact comparison to

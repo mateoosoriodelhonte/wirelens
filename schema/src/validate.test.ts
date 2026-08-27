@@ -92,6 +92,45 @@ describe('validateCaptureDocument', () => {
     expect(validateCaptureDocument(value)).toEqual(value);
   });
 
+  it('accepts TCP lifecycle state and the four neutral TCP observation types', () => {
+    const value = minimal() as Record<string, any>;
+    value.flows = [
+      {
+        id: 'tcp-flow-1',
+        protocol: 'TCP',
+        clientEndpointId: 'endpoint-1',
+        serverEndpointId: 'endpoint-2',
+        startTimestampNs: '0',
+        endTimestampNs: '4',
+        packetNumbers: [1, 2, 3, 4],
+        capturedBytes: 216,
+        originalBytes: 216,
+        handshake: 'complete',
+        midStream: false,
+        termination: 'reset',
+        events: [
+          { packetNumber: 1, label: 'SYN' },
+          { packetNumber: 2, label: 'SYN + ACK' },
+          { packetNumber: 3, label: 'ACK' },
+          { packetNumber: 4, label: 'RST' },
+        ],
+      },
+    ];
+    value.observations = [
+      'tcp-reset',
+      'tcp-incomplete-handshake',
+      'tcp-retransmission-candidate',
+      'tcp-connection-without-close',
+    ].map((type, index) => ({
+      id: `observation-${index + 1}`,
+      type,
+      message: 'Neutral TCP observation.',
+      packetNumbers: [1],
+      limitation: 'Only packets in this capture were considered.',
+    }));
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
   it('accepts the observation boundary and rejects the next item', () => {
     const value = minimal() as Record<string, any>;
     value.observations = Array.from({ length: 1024 }, (_, index) => ({
