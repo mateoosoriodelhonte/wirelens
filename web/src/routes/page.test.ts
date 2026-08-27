@@ -58,6 +58,7 @@ describe('capture page', () => {
     expect(screen.getByText('3 packets')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /conversations/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /dns exchanges/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Observations' })).toBeInTheDocument();
     expect(screen.getByText('SYN + ACK')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ethernet/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ipv4/i })).toBeInTheDocument();
@@ -91,8 +92,36 @@ describe('capture page', () => {
       name: 'View response packet 2 for example.com',
     });
     await fireEvent.click(evidence);
-    expect(screen.getByRole('heading', { name: 'Packet details' })).toHaveFocus();
-    expect(screen.getByText('Packet 2', { exact: true })).toBeVisible();
+    const detailsHeading = screen.getByRole('heading', { name: 'Packet details' });
+    expect(detailsHeading).toHaveFocus();
+    expect(detailsHeading.closest('section')).toHaveTextContent('Packet 2');
+  });
+
+  it('follows TCP observation evidence to packet details', async () => {
+    const tcpDocument = {
+      ...demoDocument,
+      observations: [
+        {
+          id: 'observation-1',
+          type: 'tcp-retransmission-candidate',
+          message: 'TCP segment appears to resend bytes already seen.',
+          packetNumbers: [1, 2],
+          limitation: 'Only packets in this capture were considered.',
+        },
+      ],
+    };
+    render(Page);
+    instances[0].parse.mockResolvedValue(tcpDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('retransmission.pcap')] },
+    });
+    const evidence = await screen.findByRole('button', {
+      name: /view evidence packet 2 for TCP segment appears to resend bytes already seen/i,
+    });
+    await fireEvent.click(evidence);
+    const detailsHeading = screen.getByRole('heading', { name: 'Packet details' });
+    expect(detailsHeading).toHaveFocus();
+    expect(detailsHeading.closest('section')).toHaveTextContent('Packet 2');
   });
 
   it('shows a typed parser error in an alert and disposes on teardown', async () => {
@@ -143,6 +172,7 @@ describe('capture page', () => {
           capturedBytes: 54,
           originalBytes: 54,
           handshake: 'partial' as const,
+          midStream: true,
           termination: 'unknown' as const,
           events: [],
         },

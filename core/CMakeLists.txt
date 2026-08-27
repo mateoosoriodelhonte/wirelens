@@ -8,6 +8,7 @@ add_library(wirelens_core
   src/udp_parser.cpp
   src/dns_parser.cpp
   src/dns_builder.cpp
+  src/observation_builder.cpp
   src/tcp_parser.cpp
   src/flow_builder.cpp
   src/serialize.cpp)

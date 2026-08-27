@@ -52,7 +52,8 @@ std::string flag_text(const std::uint8_t flags) {
 
 std::optional<ProtocolLayer> decode_tcp(const std::span<const std::byte> payload,
                                         const std::size_t captureOffset,
-                                        const std::size_t packetOffset, TcpFacts& facts) {
+                                        const std::size_t packetOffset, const bool payloadComplete,
+                                        TcpFacts& facts) {
   if (payload.size() < 20)
     return std::nullopt;
   const auto dataOffset =
@@ -74,15 +75,28 @@ std::optional<ProtocolLayer> decode_tcp(const std::span<const std::byte> payload
   add_field(layer, "flags", flag_text(flags), captureOffset, packetOffset + 12, 2);
   add_field(layer, "window", std::to_string(u16be(payload, 14)), captureOffset, packetOffset + 14,
             2);
-  if ((flags & 0x12U) == 0x12U) {
+  if ((flags & 0x04U) != 0U) {
+    layer.fields.at(5).explanationKey = "tcp.rst";
+  } else if ((flags & 0x01U) != 0U) {
+    layer.fields.at(5).explanationKey = "tcp.fin";
+  } else if ((flags & 0x12U) == 0x12U) {
     layer.fields.at(5).explanationKey = "tcp.syn-ack";
   } else if ((flags & 0x12U) == 0x02U) {
     layer.fields.at(5).explanationKey = "tcp.syn";
+  } else if (payload.size() > dataOffset) {
+    layer.fields.at(5).explanationKey = "tcp.data";
   } else if ((flags & 0x12U) == 0x10U) {
     layer.fields.at(5).explanationKey = "tcp.ack";
   }
-  facts = {true, {}, {}, u16be(payload, 0), u16be(payload, 2), u32be(payload, 4), u32be(payload, 8),
-           flags};
+  facts.valid = true;
+  facts.sourcePort = u16be(payload, 0);
+  facts.destinationPort = u16be(payload, 2);
+  facts.sequence = u32be(payload, 4);
+  facts.acknowledgment = u32be(payload, 8);
+  facts.flags = flags;
+  facts.headerLength = dataOffset;
+  facts.payload = payload.subspan(dataOffset);
+  facts.payloadComplete = payloadComplete;
   return layer;
 }
 } // namespace wirelens::internal

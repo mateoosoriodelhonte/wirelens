@@ -1,9 +1,9 @@
 {
   "capture": {
-    "capturedBytes": 162,
-    "durationNs": "20000000",
-    "endTimestampNs": "1020000000",
-    "format": "pcapng",
+    "capturedBytes": 216,
+    "durationNs": "30000000",
+    "endTimestampNs": "1030000000",
+    "format": "pcap",
     "interfaces": [
       {
         "id": 0,
@@ -12,8 +12,8 @@
         "timestampResolution": "microseconds"
       }
     ],
-    "originalBytes": 162,
-    "packetCount": 3,
+    "originalBytes": 216,
+    "packetCount": 4,
     "startTimestampNs": "1000000000",
     "timestampResolution": "microseconds"
   },
@@ -36,9 +36,9 @@
   ],
   "flows": [
     {
-      "capturedBytes": 162,
+      "capturedBytes": 216,
       "clientEndpointId": "endpoint-1",
-      "endTimestampNs": "1020000000",
+      "endTimestampNs": "1030000000",
       "events": [
         {
           "label": "SYN",
@@ -51,26 +51,30 @@
         {
           "label": "ACK",
           "packetNumber": 3
+        },
+        {
+          "label": "RST",
+          "packetNumber": 4
         }
       ],
       "handshake": "complete",
       "id": "tcp-flow-1",
       "midStream": false,
-      "originalBytes": 162,
-      "packetNumbers": [1, 2, 3],
+      "originalBytes": 216,
+      "packetNumbers": [1, 2, 3, 4],
       "protocol": "TCP",
       "serverEndpointId": "endpoint-2",
       "startTimestampNs": "1000000000",
-      "termination": "open-at-capture-end"
+      "termination": "reset"
     }
   ],
   "observations": [
     {
       "id": "observation-1",
       "limitation": "Only packets in this capture were considered.",
-      "message": "TCP connection had no observed close before the capture ended.",
-      "packetNumbers": [1, 3],
-      "type": "tcp-connection-without-close"
+      "message": "TCP reset was observed.",
+      "packetNumbers": [4],
+      "type": "tcp-reset"
     }
   ],
   "packets": [
@@ -84,7 +88,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 76,
+            "captureOffset": 40,
             "length": 54,
             "packetOffset": 0
           },
@@ -92,7 +96,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 76,
+                "captureOffset": 40,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -102,7 +106,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 82,
+                "captureOffset": 46,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -112,7 +116,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 88,
+                "captureOffset": 52,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -126,7 +130,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 90,
+            "captureOffset": 54,
             "length": 40,
             "packetOffset": 14
           },
@@ -134,7 +138,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 90,
+                "captureOffset": 54,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -144,7 +148,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 90,
+                "captureOffset": 54,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -154,7 +158,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 92,
+                "captureOffset": 56,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -164,7 +168,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 98,
+                "captureOffset": 62,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -174,7 +178,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 99,
+                "captureOffset": 63,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -184,7 +188,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 102,
+                "captureOffset": 66,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -194,7 +198,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 106,
+                "captureOffset": 70,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -208,7 +212,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 110,
+            "captureOffset": 74,
             "length": 20,
             "packetOffset": 34
           },
@@ -216,7 +220,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 110,
+                "captureOffset": 74,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -226,7 +230,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 112,
+                "captureOffset": 76,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -236,7 +240,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 114,
+                "captureOffset": 78,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -246,7 +250,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 118,
+                "captureOffset": 82,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -256,7 +260,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 122,
+                "captureOffset": 86,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -266,7 +270,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 122,
+                "captureOffset": 86,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -276,7 +280,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 124,
+                "captureOffset": 88,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -305,7 +309,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 164,
+            "captureOffset": 110,
             "length": 54,
             "packetOffset": 0
           },
@@ -313,7 +317,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 164,
+                "captureOffset": 110,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -323,7 +327,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 170,
+                "captureOffset": 116,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -333,7 +337,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 176,
+                "captureOffset": 122,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -347,7 +351,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 178,
+            "captureOffset": 124,
             "length": 40,
             "packetOffset": 14
           },
@@ -355,7 +359,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 178,
+                "captureOffset": 124,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -365,7 +369,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 178,
+                "captureOffset": 124,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -375,7 +379,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 180,
+                "captureOffset": 126,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -385,7 +389,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 186,
+                "captureOffset": 132,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -395,7 +399,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 187,
+                "captureOffset": 133,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -405,7 +409,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 190,
+                "captureOffset": 136,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -415,7 +419,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 194,
+                "captureOffset": 140,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -429,7 +433,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 198,
+            "captureOffset": 144,
             "length": 20,
             "packetOffset": 34
           },
@@ -437,7 +441,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 198,
+                "captureOffset": 144,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -447,7 +451,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 200,
+                "captureOffset": 146,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -457,7 +461,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 202,
+                "captureOffset": 148,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -467,7 +471,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 206,
+                "captureOffset": 152,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -477,7 +481,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 210,
+                "captureOffset": 156,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -487,7 +491,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 210,
+                "captureOffset": 156,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -497,7 +501,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 212,
+                "captureOffset": 158,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -526,7 +530,7 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 252,
+            "captureOffset": 180,
             "length": 54,
             "packetOffset": 0
           },
@@ -534,7 +538,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 252,
+                "captureOffset": 180,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -544,7 +548,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 258,
+                "captureOffset": 186,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -554,7 +558,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 264,
+                "captureOffset": 192,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -568,7 +572,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 266,
+            "captureOffset": 194,
             "length": 40,
             "packetOffset": 14
           },
@@ -576,7 +580,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 266,
+                "captureOffset": 194,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -586,7 +590,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 266,
+                "captureOffset": 194,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -596,7 +600,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 268,
+                "captureOffset": 196,
                 "length": 2,
                 "packetOffset": 16
               },
@@ -606,7 +610,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 274,
+                "captureOffset": 202,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -616,7 +620,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 275,
+                "captureOffset": 203,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -626,7 +630,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 278,
+                "captureOffset": 206,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -636,7 +640,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 282,
+                "captureOffset": 210,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -650,7 +654,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 286,
+            "captureOffset": 214,
             "length": 20,
             "packetOffset": 34
           },
@@ -658,7 +662,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 286,
+                "captureOffset": 214,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -668,7 +672,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 288,
+                "captureOffset": 216,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -678,7 +682,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 290,
+                "captureOffset": 218,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -688,7 +692,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 294,
+                "captureOffset": 222,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -698,7 +702,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 298,
+                "captureOffset": 226,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -708,7 +712,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 298,
+                "captureOffset": 226,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -718,7 +722,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 300,
+                "captureOffset": 228,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -736,6 +740,227 @@
       "sourceEndpointId": "endpoint-1",
       "summary": "ACK",
       "timestampNs": "1020000000"
+    },
+    {
+      "analysisFlags": [],
+      "capturedLength": 54,
+      "destinationEndpointId": "endpoint-1",
+      "flowId": "tcp-flow-1",
+      "id": "packet-4",
+      "interfaceId": 0,
+      "layers": [
+        {
+          "byteRange": {
+            "captureOffset": 250,
+            "length": 54,
+            "packetOffset": 0
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 250,
+                "length": 6,
+                "packetOffset": 0
+              },
+              "explanationKey": null,
+              "name": "destinationMac",
+              "value": "02:00:00:00:00:01"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 256,
+                "length": 6,
+                "packetOffset": 6
+              },
+              "explanationKey": null,
+              "name": "sourceMac",
+              "value": "02:00:00:00:00:02"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 262,
+                "length": 2,
+                "packetOffset": 12
+              },
+              "explanationKey": null,
+              "name": "etherType",
+              "value": "2048"
+            }
+          ],
+          "label": "Ethernet II",
+          "protocol": "ETHERNET"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 264,
+            "length": 40,
+            "packetOffset": 14
+          },
+          "explanationKey": null,
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 264,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "version",
+              "value": "4"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 264,
+                "length": 1,
+                "packetOffset": 14
+              },
+              "explanationKey": null,
+              "name": "headerLength",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 266,
+                "length": 2,
+                "packetOffset": 16
+              },
+              "explanationKey": null,
+              "name": "totalLength",
+              "value": "40"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 272,
+                "length": 1,
+                "packetOffset": 22
+              },
+              "explanationKey": null,
+              "name": "ttl",
+              "value": "64"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 273,
+                "length": 1,
+                "packetOffset": 23
+              },
+              "explanationKey": null,
+              "name": "protocol",
+              "value": "6"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 276,
+                "length": 4,
+                "packetOffset": 26
+              },
+              "explanationKey": null,
+              "name": "source",
+              "value": "198.51.100.20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 280,
+                "length": 4,
+                "packetOffset": 30
+              },
+              "explanationKey": null,
+              "name": "destination",
+              "value": "192.0.2.10"
+            }
+          ],
+          "label": "IPv4",
+          "protocol": "IPV4"
+        },
+        {
+          "byteRange": {
+            "captureOffset": 284,
+            "length": 20,
+            "packetOffset": 34
+          },
+          "explanationKey": "tcp",
+          "fields": [
+            {
+              "byteRange": {
+                "captureOffset": 284,
+                "length": 2,
+                "packetOffset": 34
+              },
+              "explanationKey": null,
+              "name": "sourcePort",
+              "value": "443"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 286,
+                "length": 2,
+                "packetOffset": 36
+              },
+              "explanationKey": null,
+              "name": "destinationPort",
+              "value": "51515"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 288,
+                "length": 4,
+                "packetOffset": 38
+              },
+              "explanationKey": null,
+              "name": "sequenceNumber",
+              "value": "5001"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 292,
+                "length": 4,
+                "packetOffset": 42
+              },
+              "explanationKey": null,
+              "name": "acknowledgmentNumber",
+              "value": "1001"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 296,
+                "length": 1,
+                "packetOffset": 46
+              },
+              "explanationKey": null,
+              "name": "dataOffset",
+              "value": "20"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 296,
+                "length": 2,
+                "packetOffset": 46
+              },
+              "explanationKey": "tcp.rst",
+              "name": "flags",
+              "value": "ACK, RST"
+            },
+            {
+              "byteRange": {
+                "captureOffset": 298,
+                "length": 2,
+                "packetOffset": 48
+              },
+              "explanationKey": null,
+              "name": "window",
+              "value": "65535"
+            }
+          ],
+          "label": "TCP",
+          "protocol": "TCP"
+        }
+      ],
+      "number": 4,
+      "originalLength": 54,
+      "sourceEndpointId": "endpoint-2",
+      "summary": "ACK, RST",
+      "timestampNs": "1030000000"
     }
   ],
   "schema": "wirelens.capture"

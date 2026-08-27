@@ -62,8 +62,8 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Chromium
-        run: pnpm --dir web exec playwright install chromium
+      - name: Install Playwright browsers
+        run: pnpm --dir web exec playwright install chromium firefox
 
       - name: Run the fail-fast Phase 1 gate
         env:

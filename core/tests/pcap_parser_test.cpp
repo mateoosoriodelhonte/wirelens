@@ -823,8 +823,10 @@ TEST_CASE("parse_capture aggregates unknown PCAPNG blocks") {
     }
     const auto limited = wirelens::parse_capture(many);
     REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(limited));
-    REQUIRE(std::get<wirelens::CaptureDocument>(limited).diagnostics.size() ==
-            wirelens::kMaxDiagnostics);
+    const auto& diagnostics = std::get<wirelens::CaptureDocument>(limited).diagnostics;
+    REQUIRE(diagnostics.size() == wirelens::kMaxDiagnostics);
+    REQUIRE(diagnostics.back().code == "DIAGNOSTIC_LIMIT_REACHED");
+    REQUIRE(diagnostics.back().count.has_value());
   }
 }
 

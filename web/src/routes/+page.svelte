@@ -5,6 +5,7 @@
   import CapturePicker from '$lib/components/CapturePicker.svelte';
   import ConversationList from '$lib/components/ConversationList.svelte';
   import DnsExchangeList from '$lib/components/DnsExchangeList.svelte';
+  import ObservationList from '$lib/components/ObservationList.svelte';
   import PacketDetails from '$lib/components/PacketDetails.svelte';
   import PacketTable from '$lib/components/PacketTable.svelte';
   import TcpSequence from '$lib/components/TcpSequence.svelte';
@@ -36,6 +37,11 @@
   const dnsObservations = $derived(
     document?.observations.filter(
       (observation) => observation.type === 'dns-error' || observation.type === 'slow-dns',
+    ) ?? [],
+  );
+  const otherObservations = $derived(
+    document?.observations.filter(
+      (observation) => observation.type !== 'dns-error' && observation.type !== 'slow-dns',
     ) ?? [],
   );
 
@@ -82,6 +88,7 @@
   async function selectEvidencePacket(packetNumber: number) {
     const packet = document?.packets.find((candidate) => candidate.number === packetNumber);
     if (!packet) return;
+    if (packet.flowId) selectedFlowId = packet.flowId;
     selectPacket(packet.id);
     await tick();
     globalThis.document?.getElementById('details-title')?.focus();
@@ -141,7 +148,8 @@
     <nav class="section-nav" aria-label="Capture sections">
       <span>Jump to</span><a href={resolve('/#overview')}>Overview</a><a
         href={resolve('/#conversations')}>Conversations</a
-      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#packets')}>Packets</a>
+      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#observations')}>Observations</a>
+      <a href={resolve('/#packets')}>Packets</a>
     </nav>
   {/if}
   {#if document}
@@ -167,6 +175,7 @@
         observations={dnsObservations}
         onSelectPacket={selectEvidencePacket}
       />
+      <ObservationList observations={otherObservations} onSelectPacket={selectEvidencePacket} />
       <div class="split packet-split">
         <PacketTable
           {document}

@@ -45,7 +45,9 @@ std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payloa
   const auto source = address(payload.subspan(12, 4));
   const auto destination = address(payload.subspan(16, 4));
   const auto protocol = std::to_integer<unsigned>(payload[9]);
-  const auto fragmentOffset = u16be(payload, 6) & 0x1fffU;
+  const auto fragmentState = u16be(payload, 6);
+  const auto fragmentOffset = fragmentState & 0x1fffU;
+  const auto moreFragments = (fragmentState & 0x2000U) != 0U;
   ProtocolLayer layer{"IPV4", "IPv4", {}, std::nullopt, std::nullopt};
   layer.byteRange = range(captureOffset + packetOffset, packetOffset, boundedLength);
   add_field(layer, "version", std::to_string(version), captureOffset, packetOffset, 1);
@@ -61,8 +63,8 @@ std::optional<ProtocolLayer> decode_ipv4(const std::span<const std::byte> payloa
   if (fragmentOffset == 0) {
     const auto transport = payload.subspan(headerLength, boundedLength - headerLength);
     if (protocol == 6) {
-      if (const auto layer =
-              decode_tcp(transport, captureOffset, packetOffset + headerLength, tcp)) {
+      if (const auto layer = decode_tcp(transport, captureOffset, packetOffset + headerLength,
+                                        totalLength <= payload.size() && !moreFragments, tcp)) {
         packet.sourcePort = tcp.sourcePort;
         packet.destinationPort = tcp.destinationPort;
         packet.layers.push_back(*layer);

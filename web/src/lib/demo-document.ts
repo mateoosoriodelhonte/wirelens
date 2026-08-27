@@ -139,6 +139,7 @@ export const demoDocument: CaptureDocument = {
       capturedBytes: 162,
       originalBytes: 162,
       handshake: 'complete',
+      midStream: false,
       termination: 'open-at-capture-end',
       events: [
         { packetNumber: 1, label: 'SYN' },

@@ -112,17 +112,19 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     auto protocolDiagnostic =
         internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
                                   packet.tcp, packet.udp, packet.dns);
-    if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+    if (packet.tcp.valid && *captured < *original)
+      packet.tcp.payloadComplete = false;
+    if (protocolDiagnostic) {
       protocolDiagnostic->packetNumber = number;
-      capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+      internal::add_diagnostic(capture, std::move(*protocolDiagnostic));
     }
-    if (packet.dns.diagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+    if (packet.dns.diagnostic) {
       packet.dns.diagnostic->packetNumber = number;
-      capture.diagnostics.push_back(std::move(*packet.dns.diagnostic));
+      internal::add_diagnostic(capture, std::move(*packet.dns.diagnostic));
     }
     packet.packet.summary =
         packet.tcp.valid
-            ? internal::flag_text(packet.tcp.flags)
+            ? (packet.tcp.payload.empty() ? internal::flag_text(packet.tcp.flags) : "TCP data")
             : (packet.udp.valid
                    ? "UDP datagram"
                    : (packet.packet.layers.empty() ? "Truncated frame" : "Ethernet frame"));

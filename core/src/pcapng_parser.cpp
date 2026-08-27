@@ -218,17 +218,19 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
       auto protocolDiagnostic =
           internal::decode_ethernet(bytes.subspan(dataOffset, captured), dataOffset, packet.packet,
                                     packet.tcp, packet.udp, packet.dns);
-      if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+      if (packet.tcp.valid && captured < original)
+        packet.tcp.payloadComplete = false;
+      if (protocolDiagnostic) {
         protocolDiagnostic->packetNumber = packetNumber;
-        capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+        internal::add_diagnostic(capture, std::move(*protocolDiagnostic));
       }
-      if (packet.dns.diagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+      if (packet.dns.diagnostic) {
         packet.dns.diagnostic->packetNumber = packetNumber;
-        capture.diagnostics.push_back(std::move(*packet.dns.diagnostic));
+        internal::add_diagnostic(capture, std::move(*packet.dns.diagnostic));
       }
       packet.packet.summary =
           packet.tcp.valid
-              ? internal::flag_text(packet.tcp.flags)
+              ? (packet.tcp.payload.empty() ? internal::flag_text(packet.tcp.flags) : "TCP data")
               : (packet.udp.valid
                      ? "UDP datagram"
                      : (packet.packet.layers.empty() ? "Truncated frame" : "Ethernet frame"));
@@ -258,13 +260,11 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
   internal::build_flows(capture, parsed);
   internal::build_dns(capture, parsed);
   for (const auto& [blockType, count] : unknownBlocks) {
-    if (capture.diagnostics.size() >= kMaxDiagnostics)
-      break;
-    capture.diagnostics.push_back({"warning", "UNKNOWN_PCAPNG_BLOCK",
-                                   "Skipped " + std::to_string(count) +
-                                       " unknown PCAPNG block(s) of type " +
-                                       std::to_string(blockType),
-                                   "pcapng", std::nullopt, std::nullopt, count});
+    internal::add_diagnostic(capture,
+                             {"warning", "UNKNOWN_PCAPNG_BLOCK",
+                              "Skipped " + std::to_string(count) +
+                                  " unknown PCAPNG block(s) of type " + std::to_string(blockType),
+                              "pcapng", std::nullopt, std::nullopt, count});
   }
   capture.packets.reserve(parsed.size());
   for (auto& packet : parsed)

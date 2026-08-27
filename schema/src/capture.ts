@@ -135,6 +135,7 @@ export interface TcpFlow {
   capturedBytes: number;
   originalBytes: number;
   handshake: 'complete' | 'partial' | 'unobserved';
+  midStream: boolean;
   termination: 'graceful' | 'reset' | 'open-at-capture-end' | 'unknown';
   events: TcpFlowEvent[];
   [key: string]: unknown;

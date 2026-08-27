@@ -30,4 +30,18 @@ describe('TcpSequence', () => {
     render(TcpSequence, { props: { document, flow: document.flows[0] as TcpFlow } });
     expect(screen.getByRole('rowheader', { name: '7' })).toBeInTheDocument();
   });
+
+  it('shows lifecycle state, mid-stream limits, and close events in text', () => {
+    const flow: TcpFlow = {
+      ...tcpFlow,
+      midStream: true,
+      termination: 'reset',
+      packetNumbers: [1],
+      events: [{ packetNumber: 1, label: 'RST' }],
+    };
+    render(TcpSequence, { props: { document: demoDocument, flow } });
+    expect(screen.getByText('Reset observed')).toBeVisible();
+    expect(screen.getByText(/initial SYN was not observed/i)).toBeVisible();
+    expect(screen.getByText(/stops the TCP connection immediately/i)).toBeVisible();
+  });
 });

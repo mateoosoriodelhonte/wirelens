@@ -48,9 +48,9 @@ has_e2e_script=$(node --input-type=module -e \
 playwright_bin="$repo_root/web/node_modules/.bin/playwright"
 root_playwright_bin="$repo_root/node_modules/.bin/playwright"
 if [[ "$has_e2e_script" == yes && ( -x "$playwright_bin" || -x "$root_playwright_bin" ) ]]; then
-  run_step 'Chromium Playwright' pnpm test:e2e
+  run_step 'Chromium and Firefox Playwright' pnpm test:e2e
 else
-  printf '\n== Chromium Playwright ==\n'
+  printf '\n== Chromium and Firefox Playwright ==\n'
   printf 'Playwright: NOT_RUN (web test:e2e script or dependency is absent; Task 10 must add it)\n'
   if [[ ${WIRELENS_REQUIRE_E2E:-0} == 1 ]]; then
     printf 'Phase 1 verification: FAIL (E2E is required in this environment)\n' >&2

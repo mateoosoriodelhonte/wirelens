@@ -95,6 +95,7 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
   auto next = std::to_integer<unsigned>(payload[6]);
   std::size_t offset = 40;
   bool nonFirstFragment = false;
+  bool moreFragments = false;
   std::size_t extensionCount = 0;
   constexpr std::size_t kMaxIpv6ExtensionHeaders = 8;
   for (; extensionCount < kMaxIpv6ExtensionHeaders; ++extensionCount) {
@@ -112,6 +113,7 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
       const auto fragment = u16be(extension, 2);
       const auto fragmentOffset = static_cast<unsigned>(fragment >> 3U);
       const bool more = (fragment & 1U) != 0;
+      moreFragments = more;
       nonFirstFragment = fragmentOffset != 0;
       add_field(layer, "fragmentOffset", std::to_string(fragmentOffset), captureOffset,
                 packetOffset + offset + 2, 2);
@@ -153,7 +155,9 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
     return layer;
   const auto transport = payload.subspan(offset, 40U + boundedPayload - offset);
   if (next == 6) {
-    if (const auto tcpLayer = decode_tcp(transport, captureOffset, packetOffset + offset, tcp)) {
+    if (const auto tcpLayer =
+            decode_tcp(transport, captureOffset, packetOffset + offset,
+                       declaredPayload <= payload.size() - 40U && !moreFragments, tcp)) {
       packet.sourcePort = tcp.sourcePort;
       packet.destinationPort = tcp.destinationPort;
       tcp.source = source;

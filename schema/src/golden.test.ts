@@ -9,6 +9,11 @@ function readGolden(): CaptureDocument {
   return validateCaptureDocument(JSON.parse(readFileSync(path, 'utf8')));
 }
 
+function readFixtureGolden(name: string): CaptureDocument {
+  const path = resolve(import.meta.dirname, `../../fixtures/expected/${name}.pcap.capture.json`);
+  return validateCaptureDocument(JSON.parse(readFileSync(path, 'utf8')));
+}
+
 function fieldValue(packet: Packet, name: string): string {
   for (const layer of packet.layers) {
     const field = layer.fields.find((candidate) => candidate.name === name);
@@ -72,6 +77,33 @@ describe('reviewed handshake golden document', () => {
 
   it('contains no sensitive or raw payload object keys', () => {
     const forbidden = /raw|payload|authorization|cookie|token|secret/i;
-    expect(objectKeys(readGolden()).filter((key) => forbidden.test(key))).toEqual([]);
+    for (const name of ['tcp-handshake', 'tcp-reset', 'tcp-retransmission']) {
+      expect(objectKeys(readFixtureGolden(name)).filter((key) => forbidden.test(key))).toEqual([]);
+    }
+  });
+
+  it('validates reviewed TCP reset and retransmission evidence', () => {
+    const reset = readFixtureGolden('tcp-reset');
+    expect(reset.flows[0]).toMatchObject({
+      handshake: 'complete',
+      midStream: false,
+      termination: 'reset',
+    });
+    expect(reset.observations).toEqual([
+      expect.objectContaining({ type: 'tcp-reset', packetNumbers: [4] }),
+    ]);
+
+    const retransmission = readFixtureGolden('tcp-retransmission');
+    expect(retransmission.flows[0]).toMatchObject({
+      handshake: 'complete',
+      midStream: false,
+      termination: 'graceful',
+    });
+    expect(retransmission.observations).toEqual([
+      expect.objectContaining({
+        type: 'tcp-retransmission-candidate',
+        packetNumbers: [4, 5],
+      }),
+    ]);
   });
 });

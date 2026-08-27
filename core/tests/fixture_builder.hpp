@@ -3,6 +3,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace wirelens_test {
@@ -85,6 +89,116 @@ inline std::vector<std::byte> build_handshake() {
     put32be(bytes, tcp + 8, acks[packet]);
     bytes[tcp + 12] = std::byte{0x50};
     bytes[tcp + 13] = static_cast<std::byte>(flags[packet]);
+  }
+  return bytes;
+}
+
+struct TcpPacketSpec {
+  TcpPacketSpec(bool clientToServerValue = true, std::uint32_t sequenceValue = 0,
+                std::uint32_t acknowledgmentValue = 0, std::uint8_t flagsValue = 0x10,
+                std::vector<std::byte> payloadValue = {},
+                std::optional<std::size_t> declaredPayloadLengthValue = {},
+                std::optional<std::size_t> originalFrameLengthValue = {},
+                std::uint32_t timestampMicrosecondsValue = 0, bool moreFragmentsValue = false,
+                std::uint16_t clientPortValue = 51515, std::uint16_t serverPortValue = 443)
+      : clientToServer(clientToServerValue), sequence(sequenceValue),
+        acknowledgment(acknowledgmentValue), flags(flagsValue), payload(std::move(payloadValue)),
+        declaredPayloadLength(declaredPayloadLengthValue),
+        originalFrameLength(originalFrameLengthValue),
+        timestampMicroseconds(timestampMicrosecondsValue), moreFragments(moreFragmentsValue),
+        clientPort(clientPortValue), serverPort(serverPortValue) {}
+
+  bool clientToServer = true;
+  std::uint32_t sequence = 0;
+  std::uint32_t acknowledgment = 0;
+  std::uint8_t flags = 0x10;
+  std::vector<std::byte> payload;
+  std::optional<std::size_t> declaredPayloadLength;
+  std::optional<std::size_t> originalFrameLength;
+  std::uint32_t timestampMicroseconds = 0;
+  bool moreFragments = false;
+  std::uint16_t clientPort = 51515;
+  std::uint16_t serverPort = 443;
+};
+
+inline std::vector<std::byte> byte_payload(const std::string_view value) {
+  std::vector<std::byte> result;
+  result.reserve(value.size());
+  for (const auto character : value)
+    result.push_back(static_cast<std::byte>(static_cast<unsigned char>(character)));
+  return result;
+}
+
+inline std::vector<std::byte> build_tcp_capture(const std::span<const TcpPacketSpec> packets) {
+  constexpr std::size_t ethernetLength = 14;
+  constexpr std::size_t ipv4Length = 20;
+  constexpr std::size_t tcpLength = 20;
+  constexpr std::array<std::uint8_t, 6> clientMac{2, 0, 0, 0, 0, 1};
+  constexpr std::array<std::uint8_t, 6> serverMac{2, 0, 0, 0, 0, 2};
+  constexpr std::array<std::uint8_t, 4> clientIp{192, 0, 2, 10};
+  constexpr std::array<std::uint8_t, 4> serverIp{198, 51, 100, 20};
+
+  std::size_t size = 24;
+  for (const auto& packet : packets)
+    size += 16 + ethernetLength + ipv4Length + tcpLength + packet.payload.size();
+  std::vector<std::byte> bytes(size, std::byte{0});
+  bytes[0] = std::byte{0xd4};
+  bytes[1] = std::byte{0xc3};
+  bytes[2] = std::byte{0xb2};
+  bytes[3] = std::byte{0xa1};
+  put16(bytes, 4, 2);
+  put16(bytes, 6, 4);
+  put32le(bytes, 16, 65535);
+  put32le(bytes, 20, 1);
+
+  std::size_t record = 24;
+  for (std::size_t index = 0; index < packets.size(); ++index) {
+    const auto& packet = packets[index];
+    const auto capturedFrameLength =
+        ethernetLength + ipv4Length + tcpLength + packet.payload.size();
+    const auto originalFrameLength = packet.originalFrameLength.value_or(capturedFrameLength);
+    put32le(bytes, record, 1);
+    put32le(bytes, record + 4, packet.timestampMicroseconds);
+    put32le(bytes, record + 8, static_cast<std::uint32_t>(capturedFrameLength));
+    put32le(bytes, record + 12, static_cast<std::uint32_t>(originalFrameLength));
+
+    const auto frame = record + 16;
+    const auto& destinationMac = packet.clientToServer ? serverMac : clientMac;
+    const auto& sourceMac = packet.clientToServer ? clientMac : serverMac;
+    for (std::size_t byte = 0; byte < destinationMac.size(); ++byte) {
+      bytes[frame + byte] = static_cast<std::byte>(destinationMac[byte]);
+      bytes[frame + 6 + byte] = static_cast<std::byte>(sourceMac[byte]);
+    }
+    bytes[frame + 12] = std::byte{0x08};
+    bytes[frame + 13] = std::byte{0x00};
+
+    const auto ip = frame + ethernetLength;
+    bytes[ip] = std::byte{0x45};
+    const auto declaredPayloadLength = packet.declaredPayloadLength.value_or(packet.payload.size());
+    put16be(bytes, ip + 2,
+            static_cast<std::uint16_t>(ipv4Length + tcpLength + declaredPayloadLength));
+    put16be(bytes, ip + 4, static_cast<std::uint16_t>(index + 1));
+    if (packet.moreFragments)
+      put16be(bytes, ip + 6, 0x2000U);
+    bytes[ip + 8] = std::byte{64};
+    bytes[ip + 9] = std::byte{6};
+    const auto& sourceIp = packet.clientToServer ? clientIp : serverIp;
+    const auto& destinationIp = packet.clientToServer ? serverIp : clientIp;
+    for (std::size_t byte = 0; byte < sourceIp.size(); ++byte) {
+      bytes[ip + 12 + byte] = static_cast<std::byte>(sourceIp[byte]);
+      bytes[ip + 16 + byte] = static_cast<std::byte>(destinationIp[byte]);
+    }
+
+    const auto tcp = ip + ipv4Length;
+    put16be(bytes, tcp, packet.clientToServer ? packet.clientPort : packet.serverPort);
+    put16be(bytes, tcp + 2, packet.clientToServer ? packet.serverPort : packet.clientPort);
+    put32be(bytes, tcp + 4, packet.sequence);
+    put32be(bytes, tcp + 8, packet.acknowledgment);
+    bytes[tcp + 12] = std::byte{0x50};
+    bytes[tcp + 13] = static_cast<std::byte>(packet.flags);
+    for (std::size_t byte = 0; byte < packet.payload.size(); ++byte)
+      bytes[tcp + tcpLength + byte] = packet.payload[byte];
+    record += 16 + capturedFrameLength;
   }
   return bytes;
 }

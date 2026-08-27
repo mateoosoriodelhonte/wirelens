@@ -90,6 +90,7 @@ struct Flow {
   std::uint64_t capturedBytes = 0;
   std::uint64_t originalBytes = 0;
   HandshakeState handshake = HandshakeState::unobserved;
+  bool midStream = false;
   std::string termination = "open-at-capture-end";
   std::vector<std::size_t> packetNumbers;
   std::vector<FlowEvent> events;
