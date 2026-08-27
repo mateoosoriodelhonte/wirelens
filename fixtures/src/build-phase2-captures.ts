@@ -147,7 +147,7 @@ function dnsMessage(
   const name = dnsName();
   const answerLength = answerType === 1 ? 4 : answerType === 28 ? 16 : 0;
   const result = new Uint8Array(
-    12 + name.length + 4 + (response && answerType ? 16 + answerLength : 0),
+    12 + name.length + 4 + (response && answerType ? 12 + answerLength : 0),
   );
   u16(result, 0, id, false);
   u16(result, 2, (response ? 0x8000 : 0) | responseCode, false);
