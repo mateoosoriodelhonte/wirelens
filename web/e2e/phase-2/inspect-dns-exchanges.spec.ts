@@ -1,9 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
 import { dnsFixturePath } from '../fixtures';
 
-test('inspects synthetic DNS exchanges and follows packet evidence', async ({ page }) => {
+test('inspects synthetic DNS exchanges and follows packet evidence', async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const externalRequests: string[] = [];
@@ -47,7 +45,5 @@ test('inspects synthetic DNS exchanges and follows packet evidence', async ({ pa
   expect(pageErrors).toEqual([]);
   expect(externalRequests).toEqual([]);
 
-  const screenshotPath = resolve(process.cwd(), '../artifacts/phase-2/dns-exchanges.png');
-  await mkdir(dirname(screenshotPath), { recursive: true });
-  await page.screenshot({ path: screenshotPath, fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath('dns-exchanges.png'), fullPage: true });
 });

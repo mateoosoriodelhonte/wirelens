@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
 import { handshakeFixturePath } from '../fixtures';
 
 test('inspects the synthetic TCP handshake from file selection to packet details', async ({
   page,
-}) => {
+}, testInfo) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const externalRequests: string[] = [];
@@ -68,7 +66,5 @@ test('inspects the synthetic TCP handshake from file selection to packet details
   expect(pageErrors).toEqual([]);
   expect(externalRequests).toEqual([]);
 
-  const screenshotPath = resolve(process.cwd(), '../artifacts/phase-1/handshake-overview.png');
-  await mkdir(dirname(screenshotPath), { recursive: true });
-  await page.screenshot({ path: screenshotPath, fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath('handshake-overview.png'), fullPage: false });
 });
