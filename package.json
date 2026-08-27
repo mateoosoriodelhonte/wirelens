@@ -14,6 +14,7 @@
     "format:check": "prettier --check --ignore-unknown .",
     "lint": "pnpm --recursive --if-present lint",
     "test": "pnpm --recursive --if-present test",
+    "test:parity": "node --test scripts/check-contract-parity.test.mjs && node scripts/check-contract-parity.mjs build/native-debug/cli/wirelens fixtures/generated/tcp-handshake.pcap web/static/wasm/wirelens.js fixtures/expected/tcp-handshake.capture.json",
     "test:e2e": "pnpm --dir web test:e2e"
   },
   "devDependencies": {
