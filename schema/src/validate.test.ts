@@ -123,6 +123,26 @@ describe('validateCaptureDocument', () => {
     expect(validateCaptureDocument(value)).toEqual(value);
   });
 
+  it('accepts the DNS answer boundary and rejects the next item', () => {
+    const value = minimal() as Record<string, any>;
+    const answer = { name: 'example.com', type: 1, class: 1, value: '192.0.2.53' };
+    value.dnsExchanges = [
+      {
+        id: 'dns-exchange-1',
+        question: { name: 'example.com', type: 1, class: 1 },
+        queryPacketNumber: 1,
+        responsePacketNumber: 2,
+        responseCode: 'NOERROR',
+        answers: Array.from({ length: 1024 }, () => ({ ...answer })),
+        latencyNs: '1',
+        matched: true,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+    value.dnsExchanges[0].answers.push({ ...answer });
+    expect(() => validateCaptureDocument(value)).toThrow(/1024/);
+  });
+
   it('requires diagnostic count and accepts a positive aggregate count', () => {
     const value = minimal() as Record<string, any>;
     value.diagnostics = [

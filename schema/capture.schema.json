@@ -264,7 +264,11 @@
           "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }]
         },
         "responseCode": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
-        "answers": { "type": "array", "items": { "$ref": "#/$defs/dnsRecord" } },
+        "answers": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": { "$ref": "#/$defs/dnsRecord" }
+        },
         "latencyNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
         "matched": { "type": "boolean" }
       }

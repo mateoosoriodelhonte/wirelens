@@ -68,7 +68,7 @@ enum class NameError {
 };
 
 std::optional<NameResult> read_name(const std::span<const std::byte> bytes, const std::size_t start,
-                                    NameError& error) {
+                                    NameError& error, std::vector<bool>& knownNameStarts) {
   std::vector<std::size_t> visited;
   std::vector<std::string> labels;
   std::size_t cursor = start;
@@ -82,6 +82,7 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
       error = NameError::truncated;
       return std::nullopt;
     }
+    knownNameStarts[cursor] = true;
     if ((*lengthByte & 0xc0U) == 0xc0U) {
       if (cursor > bytes.size() || bytes.size() - cursor < 2) {
         error = NameError::truncated;
@@ -101,7 +102,7 @@ std::optional<NameResult> read_name(const std::span<const std::byte> bytes, cons
         error = NameError::pointerCycle;
         return std::nullopt;
       }
-      if (target < 12U || target > cursor) {
+      if (target < 12U || target > cursor || !knownNameStarts[target]) {
         error = NameError::invalid;
         return std::nullopt;
       }
@@ -303,10 +304,11 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
   std::size_t questionNameOffset = 12;
   std::size_t questionNameLength = 0;
   std::size_t questionTypeOffset = 12;
+  std::vector<bool> knownNameStarts(payload.size(), false);
   for (std::size_t question = 0; question < *questions; ++question) {
     const auto nameOffset = cursor;
     NameError nameError = NameError::invalid;
-    const auto name = read_name(payload, cursor, nameError);
+    const auto name = read_name(payload, cursor, nameError, knownNameStarts);
     if (!name) {
       facts.diagnostic = dns_error(name_error_code(nameError), "DNS question name is invalid",
                                    captureOffset, packetOffset + cursor);
@@ -335,7 +337,7 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
   }
   for (std::size_t recordIndex = 0; recordIndex < totalRecords; ++recordIndex) {
     NameError nameError = NameError::invalid;
-    const auto name = read_name(payload, cursor, nameError);
+    const auto name = read_name(payload, cursor, nameError, knownNameStarts);
     if (!name) {
       facts.diagnostic = dns_error(name_error_code(nameError), "DNS record name is invalid",
                                    captureOffset, packetOffset + cursor);
@@ -373,6 +375,11 @@ std::optional<ProtocolLayer> decode_dns(const std::span<const std::byte> payload
           {name->value, *type, *classCode, *type == 1U ? ipv4(recordData) : ipv6(recordData)});
     }
     cursor += *length;
+  }
+  if (cursor != payload.size()) {
+    facts.diagnostic = dns_error("DNS_TRAILING_DATA", "DNS message has trailing data",
+                                 captureOffset, packetOffset + cursor);
+    return std::nullopt;
   }
   ProtocolLayer layer{"DNS", "DNS", {}, std::nullopt, std::nullopt};
   layer.explanationKey = "dns";

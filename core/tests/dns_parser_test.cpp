@@ -434,12 +434,31 @@ TEST_CASE("DNS names enforce root, label, expanded-size, and pointer boundaries"
     REQUIRE_FALSE(decodeDns(forward).layer);
   }
 
+  SECTION("a pointer into an earlier label is rejected") {
+    const std::vector<std::byte> earlier{std::byte{2}, std::byte{1}, std::byte{0}, std::byte{0}};
+    const std::vector<std::byte> interiorPointer{std::byte{0xc0}, std::byte{13}};
+    const auto rejected = decodeDns(questionListMessage({earlier, interiorPointer}, false));
+    REQUIRE_FALSE(rejected.layer);
+    REQUIRE(rejected.facts.diagnostic);
+    REQUIRE(rejected.facts.diagnostic->code == "DNS_INVALID_NAME");
+  }
+
   SECTION("sixteen compression hops are accepted and the seventeenth is rejected") {
     REQUIRE(decodeDns(pointerChainMessage(16)).layer);
     const auto rejected = decodeDns(pointerChainMessage(17));
     REQUIRE_FALSE(rejected.layer);
     REQUIRE(rejected.facts.diagnostic->code == "DNS_POINTER_HOP_LIMIT");
   }
+}
+
+TEST_CASE("DNS rejects bytes after all declared sections") {
+  auto message = questionsMessage(1);
+  message.push_back(std::byte{'W'});
+  message.push_back(std::byte{'L'});
+  const auto rejected = decodeDns(message);
+  REQUIRE_FALSE(rejected.layer);
+  REQUIRE(rejected.facts.diagnostic);
+  REQUIRE(rejected.facts.diagnostic->code == "DNS_TRAILING_DATA");
 }
 
 TEST_CASE("DNS section counts stop at their exact named limits") {
