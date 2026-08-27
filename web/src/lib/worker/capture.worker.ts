@@ -39,10 +39,12 @@ function parseFailure(module: WasmModule, handle: number): ParseError {
   const rawOffset = module.wirelens_result_error_offset(handle);
   const offset =
     typeof rawOffset === 'bigint'
-      ? rawOffset === 0xffffffffffffffffn
+      ? rawOffset === 0xffffffffffffffffn || rawOffset === -1n
         ? null
         : rawOffset
-      : rawOffset;
+      : rawOffset === -1
+        ? null
+        : rawOffset;
   return {
     code,
     message: candidate ? `Capture parse failed: ${candidate}` : 'Capture parse failed',

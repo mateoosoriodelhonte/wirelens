@@ -100,6 +100,35 @@ describe('capture worker with the generated Emscripten module', () => {
     });
   });
 
+  it('returns the real parser error for a truncated global header', async () => {
+    const modulePath = resolve(process.cwd(), 'static/wasm/wirelens.js');
+    const wasmPath = resolve(process.cwd(), 'static/wasm/wirelens.wasm');
+    expect(existsSync(modulePath) && existsSync(wasmPath)).toBe(true);
+    const harness = new WorkerHarness();
+    const module = await loadWasmModule({
+      moduleUrl: pathToFileURL(modulePath).href,
+      wasmUrl: pathToFileURL(wasmPath).href,
+    });
+    createCaptureWorker(harness, async () => module);
+    harness.send({
+      type: 'parse',
+      requestId: 'request-truncated',
+      fileName: 'truncated.pcap',
+      buffer: new Uint8Array(3).buffer,
+    });
+    const truncated = await waitForResponse(harness, 'request-truncated');
+    expect(truncated.response).toMatchObject({
+      type: 'failed',
+      error: { code: 'TRUNCATED_GLOBAL_HEADER', captureOffset: null },
+    });
+    harness.send({ type: 'packet-bytes', requestId: 'request-after-truncated', packetIndex: 0 });
+    const packet = await waitForResponse(harness, 'request-after-truncated');
+    expect(packet.response).toMatchObject({
+      type: 'failed',
+      error: { code: 'TRUNCATED_PACKET_DATA' },
+    });
+  });
+
   it('releases a typed parse failure handle and does not allocate for empty input', async () => {
     const harness = new WorkerHarness();
     const releases: number[] = [];

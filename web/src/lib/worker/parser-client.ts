@@ -45,11 +45,10 @@ interface ParserWorker {
   terminate(): void;
 }
 
-export type WorkerFactory = (url?: string, options?: { type: 'module' }) => ParserWorker;
+export type WorkerFactory = () => ParserWorker;
 
 export interface ParserClientOptions {
   workerFactory?: WorkerFactory;
-  workerUrl?: string;
 }
 
 interface PendingRequest<T> {
@@ -80,7 +79,6 @@ function inputError(file: Pick<File, 'name' | 'size'>): ParserInputError | null 
 
 export class ParserClient {
   private readonly workerFactory: WorkerFactory;
-  private readonly workerUrl: string;
   private worker: ParserWorker | null = null;
   private hasCapture = false;
   private nextRequestNumber = 1;
@@ -89,7 +87,6 @@ export class ParserClient {
 
   constructor(options: ParserClientOptions = {}) {
     this.workerFactory = options.workerFactory ?? defaultWorkerFactory;
-    this.workerUrl = options.workerUrl ?? '';
   }
 
   get pendingRequestCount(): number {
@@ -168,7 +165,7 @@ export class ParserClient {
       const buffer = await file.arrayBuffer();
       if (operation.cancelled) return;
 
-      const worker = this.workerFactory(this.workerUrl, { type: 'module' });
+      const worker = this.workerFactory();
       this.worker = worker;
       worker.onmessage = (event) => this.handleResponse(event.data);
       worker.onerror = (event) => this.handleWorkerError(event);

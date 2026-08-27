@@ -35,7 +35,8 @@ afterEach(() => {
 describe('ParserClient', () => {
   it('transfers the file buffer and resolves a validated document', async () => {
     const worker = new FakeWorker();
-    const client = new ParserClient({ workerFactory: () => worker });
+    const workerFactory = vi.fn(() => worker);
+    const client = new ParserClient({ workerFactory });
 
     const promise = client.parse(validFile());
     await vi.waitFor(() => expect(worker.messages).toHaveLength(1));
@@ -46,6 +47,7 @@ describe('ParserClient', () => {
     expect(request.transfer[0]).toBe(
       (request.message as Extract<WorkerRequest, { type: 'parse' }>).buffer,
     );
+    expect(workerFactory).toHaveBeenCalledWith();
 
     worker.respond({
       type: 'parse-complete',
