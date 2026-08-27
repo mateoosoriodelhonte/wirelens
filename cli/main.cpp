@@ -3,7 +3,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -23,10 +23,19 @@ int main(int argc, char** argv) {
     std::cerr << "Unable to open capture: " << path << "\n";
     return 2;
   }
-  const std::vector<char> data((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-  std::vector<std::byte> bytes;
-  bytes.reserve(data.size());
-  for (const auto value : data) bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(value)));
+  input.seekg(0, std::ios::end);
+  const auto end = input.tellg();
+  if (end < 0 || static_cast<std::uintmax_t>(end) > wirelens::kMaxCaptureBytes) {
+    std::cerr << "FILE_TOO_LARGE: Capture exceeds the 64 MiB limit\n";
+    return 2;
+  }
+  input.seekg(0, std::ios::beg);
+  std::vector<std::byte> bytes(static_cast<std::size_t>(end));
+  if (!bytes.empty()) input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (!input && !input.eof()) {
+    std::cerr << "Unable to read capture: " << path << "\n";
+    return 2;
+  }
   const auto result = wirelens::parse_capture(bytes);
   if (std::holds_alternative<wirelens::ParseError>(result)) {
     const auto& parseError = std::get<wirelens::ParseError>(result);

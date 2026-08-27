@@ -32,6 +32,40 @@ TEST_CASE("parse_capture decodes the deterministic three packet handshake") {
   REQUIRE(capture.packets[0].destinationAddress == "198.51.100.20");
   REQUIRE(capture.packets[0].sourcePort == 51515);
   REQUIRE(capture.packets[0].destinationPort == 443);
+  REQUIRE(capture.packets[1].summary == "SYN + ACK");
+  REQUIRE(capture.packets[2].summary == "ACK");
+  REQUIRE(capture.packets[1].sourcePort == 443);
+  REQUIRE(capture.packets[1].destinationPort == 51515);
+  REQUIRE(capture.packets[2].sourcePort == 51515);
+  REQUIRE(capture.packets[2].destinationPort == 443);
+}
+
+TEST_CASE("parse_capture accepts all classic magic and byte orders") {
+  const std::array<std::array<std::uint8_t, 4>, 4> magics{{
+      {0xd4, 0xc3, 0xb2, 0xa1}, {0xa1, 0xb2, 0xc3, 0xd4},
+      {0x4d, 0x3c, 0xb2, 0xa1}, {0xa1, 0xb2, 0x3c, 0x4d}}};
+  for (const auto magic : magics) {
+    std::vector<std::byte> bytes(24, std::byte{0});
+    for (std::size_t i = 0; i < 4; ++i) bytes[i] = static_cast<std::byte>(magic[i]);
+    const bool little = magic[0] == 0xd4 || magic[0] == 0x4d;
+    if (little) { bytes[4] = std::byte{2}; bytes[6] = std::byte{4}; bytes[20] = std::byte{1}; }
+    else { bytes[4] = std::byte{0}; bytes[5] = std::byte{2}; bytes[6] = std::byte{0}; bytes[7] = std::byte{4}; bytes[23] = std::byte{1}; }
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+  }
+}
+
+TEST_CASE("protocol truncation keeps valid outer layers") {
+  for (const auto frameLength : {10U, 34U, 50U}) {
+    auto bytes = wirelens_test::build_handshake();
+    bytes.resize(24 + 16 + frameLength);
+    wirelens_test::put32le(bytes, 24 + 8, frameLength);
+    wirelens_test::put32le(bytes, 24 + 12, frameLength);
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
+    const auto& packet = std::get<wirelens::CaptureDocument>(result).packets.at(0);
+    REQUIRE(packet.layers.size() == (frameLength < 14U ? 0U : (frameLength < 34U ? 1U : (frameLength < 54U ? 2U : 3U))));
+  }
 }
 
 TEST_CASE("parse_capture rejects malformed record lengths") {
@@ -54,6 +88,12 @@ TEST_CASE("parse_capture reports each classic PCAP structural failure") {
     bytes[20] = std::byte{101};
     const auto result = wirelens::parse_capture(bytes);
     REQUIRE(std::get<wirelens::ParseError>(result).code == "UNSUPPORTED_LINK_TYPE");
+  }
+  SECTION("unsupported version") {
+    auto bytes = wirelens_test::build_handshake();
+    bytes[4] = std::byte{3};
+    const auto result = wirelens::parse_capture(bytes);
+    REQUIRE(std::get<wirelens::ParseError>(result).code == "UNSUPPORTED_VERSION");
   }
   SECTION("truncated record header") {
     auto bytes = wirelens_test::build_handshake();

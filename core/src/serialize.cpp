@@ -23,10 +23,6 @@ json layer_json(const ProtocolLayer& value) {
   if (value.byteRange) layer["byteRange"] = range_json(*value.byteRange);
   if (value.explanationKey) layer["explanationKey"] = *value.explanationKey;
   for (const auto& field : value.fields) layer["fields"].push_back(field_json(field));
-  if (!value.children.empty()) {
-    layer["children"] = json::array();
-    for (const auto& child : value.children) layer["children"].push_back(layer_json(child));
-  }
   return layer;
 }
 
@@ -81,7 +77,8 @@ std::string serialize_capture(const CaptureDocument& capture) {
   result["diagnostics"] = json::array();
   for (const auto& diagnostic : capture.diagnostics) {
     result["diagnostics"].push_back({{"severity", diagnostic.severity}, {"code", diagnostic.code},
-                                     {"message", diagnostic.message}, {"captureOffset", diagnostic.captureOffset}});
+                                     {"message", diagnostic.message}, {"context", diagnostic.context},
+                                     {"captureOffset", diagnostic.captureOffset}, {"packetNumber", diagnostic.packetNumber}});
   }
   return result.dump(2);
 }
@@ -89,10 +86,11 @@ std::string serialize_capture(const CaptureDocument& capture) {
 std::string format_summary(const CaptureDocument& capture) {
   std::size_t complete = 0;
   for (const auto& flow : capture.flows) if (flow.handshake == HandshakeState::complete) ++complete;
+  const auto duration = std::stoull(capture.capture.durationNs);
   return "Packets: " + std::to_string(capture.packets.size()) + "\n" +
-         "Duration: " + capture.capture.durationNs + " ns\n" +
+         "Duration: " + (duration % 1000000ULL == 0 ? std::to_string(duration / 1000000ULL) + " ms" : capture.capture.durationNs + " ns") + "\n" +
          "TCP connections: " + std::to_string(capture.flows.size()) + "\n" +
-         "Complete handshakes: " + std::to_string(complete) + "\n";
+         "Handshake: " + (complete > 0 ? "complete" : "incomplete") + "\n";
 }
 
 }  // namespace wirelens

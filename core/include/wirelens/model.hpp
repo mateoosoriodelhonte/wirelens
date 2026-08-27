@@ -25,7 +25,6 @@ struct ProtocolLayer {
   std::string protocol;
   std::string label;
   std::vector<ProtocolField> fields;
-  std::vector<ProtocolLayer> children;
   std::optional<ByteRange> byteRange;
   std::optional<std::string> explanationKey;
 };
@@ -103,7 +102,8 @@ struct Diagnostic {
   std::string code;
   std::string message;
   std::string context;
-  std::size_t captureOffset = 0;
+  std::optional<std::size_t> captureOffset;
+  std::optional<std::size_t> packetNumber;
 };
 
 struct CaptureDocument {

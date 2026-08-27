@@ -7,16 +7,15 @@ TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   const auto result = wirelens::parse_capture(wirelens_test::build_handshake());
   REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
   const auto& packet = std::get<wirelens::CaptureDocument>(result).packets.at(0);
-  REQUIRE(packet.layers.size() == 1);
+  REQUIRE(packet.layers.size() == 3);
   const auto& ethernet = packet.layers.at(0);
   REQUIRE(ethernet.protocol == "ETHERNET");
   REQUIRE(ethernet.fields.at(0).value == "02:00:00:00:00:02");
   REQUIRE(ethernet.fields.at(1).value == "02:00:00:00:00:01");
-  REQUIRE(ethernet.children.size() == 1);
-  REQUIRE(ethernet.children.at(0).protocol == "IPV4");
-  REQUIRE(ethernet.children.at(0).fields.at(3).value == "64");
-  REQUIRE(ethernet.children.at(0).children.size() == 1);
-  const auto& tcp = ethernet.children.at(0).children.at(0);
+  const auto& ipv4 = packet.layers.at(1);
+  REQUIRE(ipv4.protocol == "IPV4");
+  REQUIRE(ipv4.fields.at(3).value == "64");
+  const auto& tcp = packet.layers.at(2);
   REQUIRE(tcp.protocol == "TCP");
   REQUIRE(tcp.fields.at(0).value == "51515");
   REQUIRE(tcp.fields.at(1).value == "443");
@@ -24,4 +23,14 @@ TEST_CASE("protocol layers expose handshake fields and byte ranges") {
   REQUIRE(tcp.fields.at(5).value == "SYN");
   REQUIRE(tcp.fields.at(0).byteRange->packetOffset == 34);
   REQUIRE(tcp.fields.at(0).byteRange->captureOffset == 74);
+  const auto& synAck = packet.layers.at(2);
+  REQUIRE(synAck.fields.at(2).value == "1000");
+  const auto result2 = wirelens::parse_capture(wirelens_test::build_handshake());
+  const auto& packets = std::get<wirelens::CaptureDocument>(result2).packets;
+  REQUIRE(packets.at(1).layers.at(2).fields.at(2).value == "5000");
+  REQUIRE(packets.at(1).layers.at(2).fields.at(3).value == "1001");
+  REQUIRE(packets.at(1).layers.at(2).fields.at(5).value == "SYN + ACK");
+  REQUIRE(packets.at(2).layers.at(2).fields.at(2).value == "1001");
+  REQUIRE(packets.at(2).layers.at(2).fields.at(3).value == "5001");
+  REQUIRE(packets.at(2).layers.at(2).fields.at(5).value == "ACK");
 }
