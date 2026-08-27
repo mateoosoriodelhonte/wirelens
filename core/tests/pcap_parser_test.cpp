@@ -804,10 +804,11 @@ TEST_CASE("parse_capture aggregates unknown PCAPNG blocks") {
   const auto result = wirelens::parse_capture(bytes);
   REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
   const auto& capture = std::get<wirelens::CaptureDocument>(result);
-  REQUIRE(capture.diagnostics.size() == 1);
-  REQUIRE(capture.diagnostics.at(0).code == "UNKNOWN_PCAPNG_BLOCK");
-  REQUIRE(capture.diagnostics.at(0).severity == "warning");
-  REQUIRE(capture.diagnostics.at(0).count == 2);
+  REQUIRE(capture.diagnostics.size() == 2);
+  REQUIRE(capture.diagnostics.at(0).code == "DNS_TRUNCATED_HEADER");
+  REQUIRE(capture.diagnostics.at(1).code == "UNKNOWN_PCAPNG_BLOCK");
+  REQUIRE(capture.diagnostics.at(1).severity == "warning");
+  REQUIRE(capture.diagnostics.at(1).count == 2);
 
   SECTION("diagnostics stop at the named limit") {
     auto many = build_ipv6_udp_pcapng();

@@ -36,7 +36,7 @@ std::uint16_t u16be(const std::span<const std::byte> bytes, const std::size_t of
 
 std::optional<Diagnostic> decode_ethernet(const std::span<const std::byte> frame,
                                           const std::size_t captureOffset, Packet& packet,
-                                          TcpFacts& tcp, UdpFacts& udp) {
+                                          TcpFacts& tcp, UdpFacts& udp, DnsFacts& dns) {
   if (frame.size() < 14)
     return std::nullopt;
   ProtocolLayer layer{"ETHERNET", "Ethernet II", {}, std::nullopt, std::nullopt};
@@ -75,8 +75,8 @@ std::optional<Diagnostic> decode_ethernet(const std::span<const std::byte> frame
     const auto beforeIp = packet.layers.size();
     const auto payload = frame.subspan(networkOffset);
     const auto ip = etherType == 0x0800U
-                        ? decode_ipv4(payload, captureOffset, networkOffset, tcp, udp, packet)
-                        : decode_ipv6(payload, captureOffset, networkOffset, tcp, udp, packet);
+                        ? decode_ipv4(payload, captureOffset, networkOffset, tcp, udp, dns, packet)
+                        : decode_ipv6(payload, captureOffset, networkOffset, tcp, udp, dns, packet);
     if (ip) {
       std::optional<ProtocolLayer> tcp;
       if (packet.layers.size() > beforeIp) {

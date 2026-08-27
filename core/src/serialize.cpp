@@ -39,6 +39,17 @@ json layer_json(const ProtocolLayer& value) {
   return layer;
 }
 
+json question_json(const DnsQuestion& value) {
+  return {{"name", value.name}, {"type", value.type}, {"class", value.classCode}};
+}
+
+json record_json(const DnsRecord& value) {
+  return {{"name", value.name},
+          {"type", value.type},
+          {"class", value.classCode},
+          {"value", value.value}};
+}
+
 const char* handshake_text(const HandshakeState state) {
   switch (state) {
   case HandshakeState::complete:
@@ -115,6 +126,27 @@ std::string serialize_capture(const CaptureDocument& capture) {
     }
     result["flows"].push_back(std::move(item));
   }
+  result["dnsExchanges"] = json::array();
+  for (const auto& exchange : capture.dnsExchanges) {
+    json item{{"id", exchange.id},
+              {"question", question_json(exchange.question)},
+              {"queryPacketNumber", exchange.queryPacketNumber},
+              {"responsePacketNumber", exchange.responsePacketNumber},
+              {"responseCode", exchange.responseCode},
+              {"answers", json::array()},
+              {"latencyNs", exchange.latencyNs},
+              {"matched", exchange.matched}};
+    for (const auto& answer : exchange.answers)
+      item["answers"].push_back(record_json(answer));
+    result["dnsExchanges"].push_back(std::move(item));
+  }
+  result["observations"] = json::array();
+  for (const auto& observation : capture.observations)
+    result["observations"].push_back({{"id", observation.id},
+                                      {"type", observation.type},
+                                      {"message", observation.message},
+                                      {"packetNumbers", observation.packetNumbers},
+                                      {"limitation", observation.limitation}});
   result["diagnostics"] = json::array();
   for (const auto& diagnostic : capture.diagnostics) {
     result["diagnostics"].push_back({{"severity", diagnostic.severity},

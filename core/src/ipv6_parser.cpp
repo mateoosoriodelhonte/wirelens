@@ -69,7 +69,7 @@ std::string address(const std::span<const std::byte> bytes) {
 std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payload,
                                          const std::size_t captureOffset,
                                          const std::size_t packetOffset, TcpFacts& tcp,
-                                         UdpFacts& udp, Packet& packet) {
+                                         UdpFacts& udp, DnsFacts& dns, Packet& packet) {
   if (payload.size() < 40)
     return std::nullopt;
   if ((std::to_integer<unsigned>(payload[0]) >> 4U) != 6)
@@ -167,6 +167,9 @@ std::optional<ProtocolLayer> decode_ipv6(const std::span<const std::byte> payloa
       udp.source = source;
       udp.destination = destination;
       packet.layers.push_back(*udpLayer);
+      if (const auto dnsLayer = decode_dns(transport.subspan(8, udp.payloadLength), captureOffset,
+                                           packetOffset + offset + 8, udp, dns))
+        packet.layers.push_back(*dnsLayer);
     }
   }
   return layer;

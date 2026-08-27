@@ -19,6 +19,7 @@
   },
   "contractVersion": "2.0.0",
   "diagnostics": [],
+  "dnsExchanges": [],
   "endpoints": [
     {
       "address": "192.0.2.10",
@@ -62,6 +63,7 @@
       "termination": "open-at-capture-end"
     }
   ],
+  "observations": [],
   "packets": [
     {
       "analysisFlags": [],

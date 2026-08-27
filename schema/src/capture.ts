@@ -24,6 +24,8 @@ export interface CaptureDocument {
   endpoints: Endpoint[];
   packets: Packet[];
   flows: Array<TcpFlow | UdpFlow>;
+  dnsExchanges: DnsExchange[];
+  observations: Observation[];
   diagnostics: ParseDiagnostic[];
   [key: string]: unknown;
 }
@@ -148,6 +150,42 @@ export interface UdpFlow {
   packetNumbers: number[];
   capturedBytes: number;
   originalBytes: number;
+  [key: string]: unknown;
+}
+
+export interface DnsQuestion {
+  name: string;
+  type: number;
+  class: number;
+  [key: string]: unknown;
+}
+
+export interface DnsRecord {
+  name: string;
+  type: number;
+  class: number;
+  value: string;
+  [key: string]: unknown;
+}
+
+export interface DnsExchange {
+  id: string;
+  question: DnsQuestion;
+  queryPacketNumber: number | null;
+  responsePacketNumber: number | null;
+  responseCode: string | null;
+  answers: DnsRecord[];
+  latencyNs: DecimalString | null;
+  matched: boolean;
+  [key: string]: unknown;
+}
+
+export interface Observation {
+  id: string;
+  type: string;
+  message: string;
+  packetNumbers: number[];
+  limitation: string;
   [key: string]: unknown;
 }
 

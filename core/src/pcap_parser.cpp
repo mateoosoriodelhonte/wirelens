@@ -109,11 +109,16 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     packet.packet.originalLength = *original;
     packet.packet.interfaceId = 0;
     packet.sourceRange = {offset + 16, 0, *captured};
-    auto protocolDiagnostic = internal::decode_ethernet(
-        bytes.subspan(offset + 16, *captured), offset + 16, packet.packet, packet.tcp, packet.udp);
+    auto protocolDiagnostic =
+        internal::decode_ethernet(bytes.subspan(offset + 16, *captured), offset + 16, packet.packet,
+                                  packet.tcp, packet.udp, packet.dns);
     if (protocolDiagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
       protocolDiagnostic->packetNumber = number;
       capture.diagnostics.push_back(std::move(*protocolDiagnostic));
+    }
+    if (packet.dns.diagnostic && capture.diagnostics.size() < kMaxDiagnostics) {
+      packet.dns.diagnostic->packetNumber = number;
+      capture.diagnostics.push_back(std::move(*packet.dns.diagnostic));
     }
     packet.packet.summary =
         packet.tcp.valid
@@ -138,6 +143,7 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
     capture.capture.durationNs = end >= start ? std::to_string(end - start) : "0";
   }
   internal::build_flows(capture, parsed);
+  internal::build_dns(capture, parsed);
   capture.packets.reserve(parsed.size());
   for (auto& packet : parsed)
     capture.packets.push_back(std::move(packet.packet));

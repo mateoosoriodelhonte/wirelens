@@ -19,6 +19,8 @@ describe('validateCaptureDocument', () => {
     endpoints: [],
     packets: [],
     flows: [],
+    dnsExchanges: [],
+    observations: [],
     diagnostics: [],
   });
 
@@ -59,6 +61,32 @@ describe('validateCaptureDocument', () => {
         packetNumbers: [1],
         capturedBytes: 8,
         originalBytes: 8,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts DNS exchanges and bounded neutral observations', () => {
+    const value = minimal() as Record<string, any>;
+    value.dnsExchanges = [
+      {
+        id: 'dns-exchange-1',
+        question: { name: 'example.com', type: 1, class: 1 },
+        queryPacketNumber: 1,
+        responsePacketNumber: 2,
+        responseCode: 'NOERROR',
+        answers: [{ name: 'example.com', type: 1, class: 1, value: '192.0.2.53' }],
+        latencyNs: '500000000',
+        matched: true,
+      },
+    ];
+    value.observations = [
+      {
+        id: 'observation-1',
+        type: 'slow-dns',
+        message: 'DNS response latency met the slow-response rule',
+        packetNumbers: [1, 2],
+        limitation: 'Only packets in this capture were considered.',
       },
     ];
     expect(validateCaptureDocument(value)).toEqual(value);

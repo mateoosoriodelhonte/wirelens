@@ -10,6 +10,8 @@
     "endpoints",
     "packets",
     "flows",
+    "dnsExchanges",
+    "observations",
     "diagnostics"
   ],
   "properties": {
@@ -21,6 +23,14 @@
     "flows": {
       "type": "array",
       "items": { "oneOf": [{ "$ref": "#/$defs/tcpFlow" }, { "$ref": "#/$defs/udpFlow" }] }
+    },
+    "dnsExchanges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dnsExchange" }
+    },
+    "observations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/observation" }
     },
     "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
   },
@@ -207,6 +217,61 @@
       "properties": {
         "packetNumber": { "type": "integer", "minimum": 1 },
         "label": { "enum": ["SYN", "SYN + ACK", "ACK", "FIN", "FIN + ACK", "RST", "DATA"] }
+      }
+    },
+    "dnsQuestion": {
+      "type": "object",
+      "required": ["name", "type", "class"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "class": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      }
+    },
+    "dnsRecord": {
+      "type": "object",
+      "required": ["name", "type", "class", "value"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "class": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "value": { "type": "string" }
+      }
+    },
+    "dnsExchange": {
+      "type": "object",
+      "required": [
+        "id",
+        "question",
+        "queryPacketNumber",
+        "responsePacketNumber",
+        "responseCode",
+        "answers",
+        "latencyNs",
+        "matched"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^dns-exchange-[1-9][0-9]*$" },
+        "question": { "$ref": "#/$defs/dnsQuestion" },
+        "queryPacketNumber": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "responsePacketNumber": {
+          "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }]
+        },
+        "responseCode": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "answers": { "type": "array", "items": { "$ref": "#/$defs/dnsRecord" } },
+        "latencyNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "matched": { "type": "boolean" }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "required": ["id", "type", "message", "packetNumbers", "limitation"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^observation-[1-9][0-9]*$" },
+        "type": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "packetNumbers": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "limitation": { "type": "string", "minLength": 1 }
       }
     },
     "diagnostic": {
