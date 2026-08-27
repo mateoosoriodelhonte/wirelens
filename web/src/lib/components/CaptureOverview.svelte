@@ -10,7 +10,7 @@
   <div class="section-heading">
     <div>
       <p class="eyebrow">Evidence summary</p>
-      <h2 id="overview-title">Capture overview</h2>
+      <h2 id="overview-title" tabindex="-1">Capture overview</h2>
     </div>
     <span class="privacy">Local only</span>
   </div>
