@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wirelens.local/schema/capture.schema.json",
+  "title": "WireLens capture document",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "capture",
+    "endpoints",
+    "packets",
+    "flows",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema": { "const": "wirelens.capture" },
+    "contractVersion": { "const": "1.0.0" },
+    "capture": { "$ref": "#/$defs/capture" },
+    "endpoints": { "type": "array", "items": { "$ref": "#/$defs/endpoint" } },
+    "packets": { "type": "array", "items": { "$ref": "#/$defs/packet" } },
+    "flows": { "type": "array", "items": { "$ref": "#/$defs/tcpFlow" } },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+  },
+  "$defs": {
+    "decimalString": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "byteRange": {
+      "type": "object",
+      "required": ["captureOffset", "packetOffset", "length"],
+      "properties": {
+        "captureOffset": { "$ref": "#/$defs/nonNegativeInteger" },
+        "packetOffset": { "$ref": "#/$defs/nonNegativeInteger" },
+        "length": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "required": [
+        "format",
+        "timestampResolution",
+        "packetCount",
+        "capturedBytes",
+        "originalBytes",
+        "startTimestampNs",
+        "endTimestampNs",
+        "durationNs"
+      ],
+      "properties": {
+        "format": { "const": "pcap" },
+        "timestampResolution": { "enum": ["microseconds", "nanoseconds"] },
+        "packetCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "capturedBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "originalBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "startTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "endTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "durationNs": { "$ref": "#/$defs/decimalString" }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "required": ["id", "address", "port", "addressFamily"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "address": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "addressFamily": { "enum": ["ipv4", "ipv6", "unknown"] }
+      }
+    },
+    "packet": {
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "timestampNs",
+        "capturedLength",
+        "originalLength",
+        "sourceEndpointId",
+        "destinationEndpointId",
+        "summary",
+        "layers",
+        "flowId",
+        "analysisFlags"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^packet-[1-9][0-9]*$" },
+        "number": { "type": "integer", "minimum": 1 },
+        "timestampNs": { "$ref": "#/$defs/decimalString" },
+        "capturedLength": { "$ref": "#/$defs/nonNegativeInteger" },
+        "originalLength": { "$ref": "#/$defs/nonNegativeInteger" },
+        "sourceEndpointId": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "destinationEndpointId": {
+          "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "summary": { "type": "string" },
+        "layers": { "type": "array", "items": { "$ref": "#/$defs/protocolLayer" } },
+        "flowId": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "analysisFlags": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "protocolLayer": {
+      "type": "object",
+      "required": ["protocol", "label", "fields", "byteRange", "explanationKey"],
+      "properties": {
+        "protocol": {
+          "enum": ["ETHERNET", "IPV4", "IPV6", "TCP", "UDP", "DNS", "HTTP", "TLS", "UNKNOWN"]
+        },
+        "label": { "type": "string" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/protocolField" } },
+        "byteRange": { "anyOf": [{ "$ref": "#/$defs/byteRange" }, { "type": "null" }] },
+        "explanationKey": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+      }
+    },
+    "protocolField": {
+      "type": "object",
+      "required": ["name", "value", "byteRange", "explanationKey"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" },
+        "byteRange": { "anyOf": [{ "$ref": "#/$defs/byteRange" }, { "type": "null" }] },
+        "explanationKey": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+      }
+    },
+    "tcpFlow": {
+      "type": "object",
+      "required": [
+        "id",
+        "protocol",
+        "clientEndpointId",
+        "serverEndpointId",
+        "startTimestampNs",
+        "endTimestampNs",
+        "packetNumbers",
+        "capturedBytes",
+        "originalBytes",
+        "handshake",
+        "termination",
+        "events"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^tcp-flow-[1-9][0-9]*$" },
+        "protocol": { "const": "TCP" },
+        "clientEndpointId": { "type": "string", "minLength": 1 },
+        "serverEndpointId": { "type": "string", "minLength": 1 },
+        "startTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "endTimestampNs": { "anyOf": [{ "$ref": "#/$defs/decimalString" }, { "type": "null" }] },
+        "packetNumbers": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "capturedBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "originalBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "handshake": { "enum": ["complete", "partial", "unobserved"] },
+        "termination": { "enum": ["graceful", "reset", "open-at-capture-end", "unknown"] },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/tcpEvent" } }
+      }
+    },
+    "tcpEvent": {
+      "type": "object",
+      "required": ["packetNumber", "label"],
+      "properties": {
+        "packetNumber": { "type": "integer", "minimum": 1 },
+        "label": { "enum": ["SYN", "SYN + ACK", "ACK", "FIN", "FIN + ACK", "RST", "DATA"] }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["severity", "code", "message", "context", "captureOffset", "packetNumber"],
+      "properties": {
+        "severity": { "enum": ["info", "warning", "error"] },
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "context": { "type": "string" },
+        "captureOffset": {
+          "anyOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }]
+        },
+        "packetNumber": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }
+      }
+    }
+  }
+}

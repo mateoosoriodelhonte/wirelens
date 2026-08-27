@@ -1,0 +1,64 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { buildTcpHandshakePcap } from './build-handshake.js';
+
+describe('buildTcpHandshakePcap', () => {
+  it('builds the exact three-packet handshake capture', () => {
+    const bytes = buildTcpHandshakePcap();
+    expect(bytes.byteLength).toBe(234);
+    expect([...bytes.slice(0, 4)]).toEqual([0xd4, 0xc3, 0xb2, 0xa1]);
+
+    const littleEndian = (offset: number) => new DataView(bytes.buffer).getUint32(offset, true);
+    const network16 = (frameOffset: number, offset: number) =>
+      new DataView(bytes.buffer).getUint16(frameOffset + offset, false);
+    const network32 = (frameOffset: number, offset: number) =>
+      new DataView(bytes.buffer).getUint32(frameOffset + offset, false);
+    const frameOffsets = [24 + 16, 24 + 16 + 70, 24 + 16 + 140];
+    expect(frameOffsets.map((offset) => littleEndian(offset - 16 + 8))).toEqual([54, 54, 54]);
+    expect(frameOffsets.map((offset) => littleEndian(offset - 16 + 12))).toEqual([54, 54, 54]);
+    expect(frameOffsets.map((offset) => littleEndian(offset - 16))).toEqual([1, 1, 1]);
+    expect(frameOffsets.map((offset) => littleEndian(offset - 16 + 4))).toEqual([0, 10000, 20000]);
+
+    const expectedAddresses = [
+      [
+        [192, 0, 2, 10],
+        [198, 51, 100, 20],
+      ],
+      [
+        [198, 51, 100, 20],
+        [192, 0, 2, 10],
+      ],
+      [
+        [192, 0, 2, 10],
+        [198, 51, 100, 20],
+      ],
+    ];
+    expect(
+      frameOffsets.map((offset, index) => [
+        [...bytes.slice(offset + 14 + 12, offset + 14 + 16)],
+        [...bytes.slice(offset + 14 + 16, offset + 14 + 20)],
+      ]),
+    ).toEqual(expectedAddresses);
+    expect(frameOffsets.map((offset) => network16(offset, 34))).toEqual([51515, 443, 51515]);
+    expect(frameOffsets.map((offset) => network16(offset, 36))).toEqual([443, 51515, 443]);
+    expect(frameOffsets.map((offset) => network32(offset, 38))).toEqual([1000, 5000, 1001]);
+    expect(frameOffsets.map((offset) => network32(offset, 42))).toEqual([0, 1001, 5001]);
+    expect(frameOffsets.map((offset) => bytes[offset + 47])).toEqual([0x02, 0x12, 0x10]);
+  });
+
+  it('is deterministic across generations', () => {
+    const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
+    expect(hash(buildTcpHandshakePcap())).toBe(hash(buildTcpHandshakePcap()));
+  });
+
+  it('matches the reviewed hash and checked-in bytes', () => {
+    const generated = buildTcpHandshakePcap();
+    const checkedIn = readFileSync(resolve(import.meta.dirname, '../generated/tcp-handshake.pcap'));
+    expect(createHash('sha256').update(generated).digest('hex')).toBe(
+      'a55e8e886b92357ffd09b5ee50ec29838b84b079c021fdf4f6869125e4995a82',
+    );
+    expect([...generated]).toEqual([...checkedIn]);
+  });
+});
