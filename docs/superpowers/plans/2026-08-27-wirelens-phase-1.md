@@ -6,7 +6,7 @@
 
 **Architecture:** A safe C++20 core parses one bounded capture into a transport-neutral domain model. The CLI and a small Emscripten C ABI serialize the same normalized JSON contract. A normal Web Worker owns capture bytes and WebAssembly; the SvelteKit static UI consumes only validated contract data.
 
-**Tech Stack:** C++20, CMake 4.4.3, Catch2 3.16.0, nlohmann/json 3.12.0, Emscripten 6.0.8, Svelte 5.56.10, SvelteKit 2.70.3, TypeScript 7.0.2, Vite 8.2.2, pnpm 11.24.0, Ajv 8.20.0, Vitest 4.1.11, Playwright 1.62.1.
+**Tech Stack:** C++20, CMake 4.4.2 local package, Catch2 3.16.0, nlohmann/json 3.12.0, Emscripten 6.0.8, Svelte 5.56.10, SvelteKit 2.70.3, TypeScript 7.0.2, Vite 8.2.2, pnpm 11.24.0, Ajv 8.20.0, Vitest 4.1.11, Playwright 1.62.1.
 
 **Spec:** `docs/superpowers/specs/2026-08-27-wirelens-v1-design.md`
 
@@ -125,6 +125,7 @@ Frame length: 54 bytes each
 - Create: `.editorconfig`
 - Create: `.clang-format`
 - Create: `.prettierrc.json`
+- Create: `.prettierignore`
 - Create: `LICENSE`
 - Create: `CMakeLists.txt`
 - Create: `CMakePresets.json`
@@ -163,7 +164,7 @@ Expected: FAIL because `scripts/bootstrap-local-toolchain.sh` does not exist.
 
 - [ ] **Step 3: Add repository-safe bootstrap and build configuration**
 
-The bootstrap script must use `${WIRELENS_TOOL_DIR:-$repo_root/.tools}`. It creates a Python virtual environment there and installs `cmake==4.4.3` and `ninja==1.13.0` only inside that directory. `--print-paths` prints planned paths without installing.
+The bootstrap script must use `${WIRELENS_TOOL_DIR:-$repo_root/.tools}`. It creates a Python virtual environment there and installs `cmake==4.4.2` and `ninja==1.13.0` only inside that directory. The Python package index does not yet contain the official 4.4.3 release. `--print-paths` prints planned paths without installing.
 
 Root CMake must set C++20, disable compiler extensions, include `cmake/Dependencies.cmake`, and add existing `core`, `cli`, and `wasm` child directories. `Dependencies.cmake` must pin Catch2 `v3.16.0` and nlohmann/json `v3.12.0` with `FetchContent`.
 
@@ -181,7 +182,7 @@ Expected: PASS and every generated path is ignored.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .gitignore .editorconfig .clang-format .prettierrc.json LICENSE CMakeLists.txt CMakePresets.json cmake package.json pnpm-workspace.yaml scripts docs/superpowers/specs/2026-08-27-wirelens-v1-design.md
+git add .gitignore .editorconfig .clang-format .prettierrc.json .prettierignore LICENSE CMakeLists.txt CMakePresets.json cmake package.json pnpm-lock.yaml pnpm-workspace.yaml scripts docs/superpowers/specs/2026-08-27-wirelens-v1-design.md
 git commit -m "chore: establish WireLens build foundation"
 ```
 
@@ -451,7 +452,7 @@ git commit -m "feat: parse TCP handshake captures in C++"
 
 - [ ] **Step 1: Scaffold the static SvelteKit test environment**
 
-Use `@sveltejs/adapter-static`, Vitest browser-compatible jsdom tests, Testing Library, ESLint, and Prettier. Set `prerender = true` and `ssr = false` in `+layout.ts`. Install worktree dependencies with `pnpm --dir web install --lockfile=false`; do not commit a lane-local lockfile.
+Use `@sveltejs/adapter-static`, Vitest browser-compatible jsdom tests, Testing Library, ESLint, and Prettier. Set `prerender = true` in `+layout.ts` and keep build-time SSR enabled so the static build contains useful HTML. Create browser-only parser state in `onMount`. Install worktree dependencies with `pnpm --dir web install --lockfile=false`; do not commit a lane-local lockfile.
 
 - [ ] **Step 2: Write failing component behavior tests**
 
