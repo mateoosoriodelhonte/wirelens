@@ -7,12 +7,7 @@ local-first boundary intact. Do not add live capture, packet transmission,
 replay, scanning, probing, decryption, a backend, telemetry, analytics, or
 capture upload without a new approved design.
 
-Use a short feature branch. Keep commits small and focused. Use the repository
-identity below for commits:
-
-```text
-Mateo Osorio Delhonte <259801526+mateoosoriodelhonte@users.noreply.github.com>
-```
+Use a short feature branch and keep commits small and focused.
 
 ## Local setup
 

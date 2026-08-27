@@ -40,9 +40,9 @@ To open the local UI after the build:
 pnpm --dir web dev
 ```
 
-Choose `fixtures/generated/tcp-handshake.pcap`, or use the synthetic demo in
-the UI. The fixture is original deterministic data; it is not traffic captured
-from a network interface.
+Choose `fixtures/generated/tcp-handshake.pcap` in the UI. The fixture is
+original deterministic data; it is not traffic captured from a network
+interface.
 
 ## Commands
 

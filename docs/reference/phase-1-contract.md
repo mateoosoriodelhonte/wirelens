@@ -38,8 +38,8 @@ contract.
 
 The native and WebAssembly boundaries return typed errors for oversized input,
 truncated headers or data, unsupported magic or version, unsupported link type,
-and invalid packet lengths. An error may include a capture offset and packet
-number. No exception crosses these boundaries.
+invalid packet lengths, and invalid timestamp conversion. An error may include
+a capture offset and packet number. No exception crosses these boundaries.
 
 ## Phase 1 proof boundary
 
