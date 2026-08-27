@@ -33,6 +33,36 @@ std::string result_text(const std::uint32_t handle) {
   return {data, size};
 }
 
+std::vector<std::byte> build_pcapng_packet() {
+  const auto classic = wirelens_test::build_handshake();
+  std::vector<std::byte> bytes(48U + 96U, std::byte{0});
+  wirelens_test::put32le(bytes, 0, 0x0a0d0d0a);
+  wirelens_test::put32le(bytes, 4, 28);
+  bytes[8] = std::byte{0x4d};
+  bytes[9] = std::byte{0x3c};
+  bytes[10] = std::byte{0x2b};
+  bytes[11] = std::byte{0x1a};
+  bytes[12] = std::byte{1};
+  wirelens_test::put32le(bytes, 24, 28);
+  wirelens_test::put32le(bytes, 28, 1);
+  wirelens_test::put32le(bytes, 32, 20);
+  wirelens_test::put16(bytes, 36, 1);
+  wirelens_test::put32le(bytes, 40, 65535);
+  wirelens_test::put32le(bytes, 44, 20);
+  wirelens_test::put32le(bytes, 48, 6);
+  wirelens_test::put32le(bytes, 52, 96);
+  wirelens_test::put32le(bytes, 56, 0);
+  wirelens_test::put32le(bytes, 60, 0);
+  wirelens_test::put32le(bytes, 64, 1);
+  wirelens_test::put32le(bytes, 68, 54);
+  wirelens_test::put32le(bytes, 72, 54);
+  std::copy(classic.begin() + 40, classic.begin() + 94, bytes.begin() + 76);
+  bytes[130] = std::byte{0xa5};
+  bytes[131] = std::byte{0xa5};
+  wirelens_test::put32le(bytes, 140, 96);
+  return bytes;
+}
+
 } // namespace
 
 TEST_CASE("Wasm API owns a successful parse and exposes normalized JSON") {
@@ -114,6 +144,19 @@ TEST_CASE("Wasm API returns bounded bytes for packet one") {
   wirelens_release(handle);
   REQUIRE(wirelens_packet_data(handle, 0) == nullptr);
   REQUIRE(wirelens_packet_size(handle, 0) == 0);
+  wirelens_release(handle);
+}
+
+TEST_CASE("Wasm API returns exact unpadded PCAPNG packet bytes") {
+  const auto bytes = build_pcapng_packet();
+  const auto handle = parse(bytes);
+  REQUIRE(handle != 0);
+  REQUIRE(wirelens_result_ok(handle) == 1);
+  const auto* packet = wirelens_packet_data(handle, 0);
+  REQUIRE(packet != nullptr);
+  REQUIRE(wirelens_packet_size(handle, 0) == 54);
+  REQUIRE(std::memcmp(packet, bytes.data() + 76, 54) == 0);
+  REQUIRE(wirelens_packet_size(handle, 1) == 0);
   wirelens_release(handle);
 }
 
