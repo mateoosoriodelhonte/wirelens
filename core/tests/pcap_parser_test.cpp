@@ -414,6 +414,9 @@ TEST_CASE("IPv6 and UDP bounded protocol matrix") {
     REQUIRE(packet.layers.at(1).fields.at(6).value == "Hop-by-Hop Options");
     REQUIRE(packet.layers.at(1).fields.at(9).value == "Routing");
     REQUIRE(packet.layers.at(1).fields.at(12).value == "Destination Options");
+    REQUIRE(packet.layers.at(1).fields.at(6).byteRange->packetOffset == 54);
+    REQUIRE(packet.layers.at(1).fields.at(9).byteRange->packetOffset == 62);
+    REQUIRE(packet.layers.at(1).fields.at(12).byteRange->packetOffset == 70);
     require_bounded_ranges(packet);
   }
   SECTION("fragment fields are exposed and only the first fragment decodes transport") {
@@ -467,6 +470,17 @@ TEST_CASE("IPv6 and UDP bounded protocol matrix") {
     const auto longDeclared = wirelens::parse_capture(build_ipv6_variant({}, 17, 8, 8, 0, 80));
     REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(longDeclared));
     require_bounded_ranges(std::get<wirelens::CaptureDocument>(longDeclared).packets.at(0));
+    auto truncatedExtension = build_ipv6_variant({0}, 17, 8);
+    wirelens_test::put32le(truncatedExtension, 68, 58);
+    wirelens_test::put32le(truncatedExtension, 72, 58);
+    const auto truncatedResult = wirelens::parse_capture(truncatedExtension);
+    REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(truncatedResult));
+    const auto& truncatedPacket =
+        std::get<wirelens::CaptureDocument>(truncatedResult).packets.at(0);
+    REQUIRE(truncatedPacket.layers.size() == 2);
+    REQUIRE(truncatedPacket.layers.at(0).protocol == "ETHERNET");
+    REQUIRE(truncatedPacket.layers.at(1).protocol == "IPV6");
+    require_bounded_ranges(truncatedPacket);
   }
   SECTION("UDP length boundary is enforced for IPv4 and IPv6") {
     const auto ipv4Exact = wirelens::parse_capture(build_ipv4_udp_pcap());
