@@ -10,6 +10,7 @@ print_paths() {
   printf 'Tool directory: %s\n' "$tool_dir"
   printf 'CMake: %s\n' "$venv_dir/bin/cmake"
   printf 'Ninja: %s\n' "$venv_dir/bin/ninja"
+  printf 'Clang format: %s\n' "$venv_dir/bin/clang-format"
   printf 'Activate: export PATH=%s/bin:$PATH\n' "$venv_dir"
 }
 
@@ -23,6 +24,7 @@ fi
   --disable-pip-version-check \
   --no-input \
   'cmake==4.4.2' \
-  'ninja==1.13.0'
+  'ninja==1.13.0' \
+  'clang-format==21.1.8'
 
 print_paths
