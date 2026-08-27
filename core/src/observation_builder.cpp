@@ -8,13 +8,28 @@
 namespace wirelens::internal {
 
 void add_diagnostic(CaptureDocument& capture, Diagnostic diagnostic) {
-  const auto limit =
+  const auto diagnosticLimit =
       std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(), [](const auto& value) {
         return value.code == "DIAGNOSTIC_LIMIT_REACHED" ||
                value.code == "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
       });
-  if (limit != capture.diagnostics.end()) {
-    limit->count = limit->count.value_or(0U) + 1U;
+  if (diagnosticLimit != capture.diagnostics.end()) {
+    diagnosticLimit->count = diagnosticLimit->count.value_or(0U) + diagnostic.count.value_or(1U);
+    return;
+  }
+  const auto observationLimit =
+      std::find_if(capture.diagnostics.begin(), capture.diagnostics.end(),
+                   [](const auto& value) { return value.code == "OBSERVATION_LIMIT_REACHED"; });
+  if (observationLimit != capture.diagnostics.end()) {
+    if (capture.diagnostics.size() < kMaxDiagnostics) {
+      capture.diagnostics.push_back(std::move(diagnostic));
+      return;
+    }
+    observationLimit->code = "DIAGNOSTIC_AND_OBSERVATION_LIMITS_REACHED";
+    observationLimit->message =
+        "Additional diagnostics and observations were omitted after their 1,024 limits";
+    observationLimit->context = "diagnostics,observations";
+    observationLimit->count = observationLimit->count.value_or(0U) + diagnostic.count.value_or(1U);
     return;
   }
   if (capture.diagnostics.size() < kMaxDiagnostics - 1U) {
@@ -25,7 +40,7 @@ void add_diagnostic(CaptureDocument& capture, Diagnostic diagnostic) {
     capture.diagnostics.push_back(
         {"warning", "DIAGNOSTIC_LIMIT_REACHED",
          "Additional diagnostics were omitted after the 1,024 diagnostic limit", "diagnostics",
-         std::nullopt, std::nullopt, 1U});
+         std::nullopt, std::nullopt, diagnostic.count.value_or(1U)});
   }
 }
 

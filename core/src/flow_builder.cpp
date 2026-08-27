@@ -43,15 +43,13 @@ struct DirectionSequenceState {
   std::uint64_t epoch = 0;
 };
 
-using DirectionEpochKey = std::pair<bool, std::uint64_t>;
-
 struct RangeState {
   std::map<std::uint64_t, std::uint64_t> intervals;
   bool ambiguous = false;
 };
 
 struct PendingRetransmission {
-  DirectionEpochKey directionEpoch;
+  bool fromClient = false;
   std::size_t priorPacketNumber = 0;
   std::size_t packetNumber = 0;
 };
@@ -205,7 +203,7 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
   std::optional<std::size_t> firstHandshakePacket;
   std::optional<std::size_t> firstResetPacket;
   std::map<SegmentKey, std::vector<SegmentEvidence>> segments;
-  std::map<DirectionEpochKey, RangeState> ranges;
+  std::map<bool, RangeState> ranges;
   std::vector<PendingRetransmission> pendingRetransmissions;
   DirectionSequenceState clientSequenceState;
   DirectionSequenceState serverSequenceState;
@@ -273,7 +271,6 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
     if (tcp.payloadComplete && sequenceSpan > 0U && sequenceSpan < kSerialHalfSpace) {
       auto& direction = fromClient ? clientSequenceState : serverSequenceState;
       const auto epoch = sequence_epoch(direction, tcp.sequence, sequenceSpan);
-      const DirectionEpochKey directionEpoch{fromClient, epoch};
       const SegmentKey key{fromClient, tcp.sequence, static_cast<std::size_t>(sequenceSpan),
                            syn,        fin,          payload_fingerprint(tcp.payload)};
       auto& candidates = segments[key];
@@ -281,10 +278,9 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
         return value.sequenceEpoch == epoch && same_payload(value.payload, tcp.payload);
       });
       if (prior != candidates.end()) {
-        pendingRetransmissions.push_back(
-            {directionEpoch, prior->packetNumber, parsed->packet.number});
+        pendingRetransmissions.push_back({fromClient, prior->packetNumber, parsed->packet.number});
       } else if (candidates.size() < kMaxPayloadHashCollisions) {
-        add_distinct_range(ranges[directionEpoch], tcp.sequence, sequenceSpan);
+        add_distinct_range(ranges[fromClient], tcp.sequence, sequenceSpan);
         candidates.push_back({tcp.payload, parsed->packet.number, epoch});
       } else {
         report_collision_limit(capture, state, parsed->packet.number);
@@ -294,7 +290,7 @@ void finalize_tcp_flow(CaptureDocument& capture, FlowState& state) {
 
   if (!state.ambiguousReuse) {
     for (const auto& pending : pendingRetransmissions) {
-      const auto range = ranges.find(pending.directionEpoch);
+      const auto range = ranges.find(pending.fromClient);
       if (range != ranges.end() && !range->second.ambiguous) {
         add_observation(capture, "tcp-retransmission-candidate",
                         "TCP segment appears to resend bytes already seen.",

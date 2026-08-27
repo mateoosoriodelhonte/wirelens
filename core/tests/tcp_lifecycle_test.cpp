@@ -170,6 +170,13 @@ TEST_CASE("TCP sequence epoch change suppresses wrap-ambiguous retransmission ev
                               {true, 0x20U, 0, 0x10, laterPayload},
                               {true, 0xffff'fff0U, 0, 0x10, repeatedPayload}});
   REQUIRE(observation(capture, "tcp-retransmission-candidate") == nullptr);
+
+  const auto exact = wirelens_test::byte_payload("12345678");
+  const auto overlap = wirelens_test::byte_payload("abcdefghijklmnop");
+  const auto overlappingWrap = parse({{true, 0xffff'fff0U, 0, 0x10, exact},
+                                      {true, 0xffff'fff0U, 0, 0x10, exact},
+                                      {true, 0xffff'fff4U, 0, 0x10, overlap}});
+  REQUIRE(observation(overlappingWrap, "tcp-retransmission-candidate") == nullptr);
 }
 
 TEST_CASE(
