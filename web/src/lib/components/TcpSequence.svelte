@@ -10,11 +10,23 @@
       : 'server-to-client';
   const elapsed = (event: TcpFlowEvent) =>
     elapsedMilliseconds(flow.startTimestampNs, packet(event.packetNumber)?.timestampNs ?? null);
+  const eventPosition = (index: number) => 20 + index * (60 / Math.max(flow.events.length - 1, 1));
+  const termination = (value: TcpFlow['termination']) =>
+    ({
+      graceful: 'Graceful close',
+      reset: 'Reset observed',
+      'open-at-capture-end': 'Open at capture end',
+      unknown: 'Close state unknown',
+    })[value];
   const explanation = (label: string) =>
     ({
       SYN: 'The client asks to start a TCP connection.',
       'SYN + ACK': 'The server accepts and acknowledges the client request.',
       ACK: 'The client acknowledges the server. The handshake is complete.',
+      FIN: 'One endpoint asks to close the TCP connection.',
+      'FIN + ACK': 'One endpoint acknowledges traffic and asks to close the connection.',
+      RST: 'One endpoint stops the TCP connection immediately.',
+      DATA: 'This packet carries TCP payload bytes.',
     })[label] ?? 'This packet carries TCP connection evidence.';
 </script>
 
@@ -24,9 +36,21 @@
       <p class="eyebrow">TCP flow</p>
       <h2 id="sequence-title">Connection sequence</h2>
     </div>
-    <span class="state">{flow.handshake}</span>
+    <div class="states" aria-label="TCP connection state">
+      <span class="state">{flow.handshake} handshake</span>
+      <span class="state termination">{termination(flow.termination)}</span>
+    </div>
   </div>
-  <div class="diagram" aria-hidden="true">
+  {#if flow.midStream}
+    <p class="flow-note">
+      The initial SYN was not observed. Direction uses the first packet in this capture.
+    </p>
+  {/if}
+  <div
+    class="diagram"
+    aria-hidden="true"
+    style={`--sequence-height: ${Math.max(7, flow.events.length * 1.5)}rem`}
+  >
     <div class="lane">
       <span>Client<br /><small>{endpoint(flow.clientEndpointId)?.address}</small></span><span
         class="line"
@@ -40,7 +64,7 @@
     {#each flow.events as event, index (event.packetNumber)}<div
         class="event event-{direction(event)}"
         data-label={event.label}
-        style={`--event-position: ${20 + index * 30}%`}
+        style={`--event-position: ${eventPosition(index)}%`}
       >
         <span class="event-mark">{direction(event) === 'client-to-server' ? '↗' : '↙'}</span>
       </div>{/each}
@@ -77,6 +101,12 @@
     justify-content: space-between;
     align-items: start;
   }
+  .states {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.4rem;
+  }
   .eyebrow {
     margin: 0 0 0.35rem;
     color: var(--accent);
@@ -99,11 +129,24 @@
     font-weight: 700;
     text-transform: capitalize;
   }
+  .state.termination {
+    border-color: var(--line-strong);
+    color: var(--muted);
+  }
+  .flow-note {
+    margin: -0.45rem 0 0;
+    padding: 0.65rem 0.75rem;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
   .diagram {
     position: relative;
     display: grid;
     gap: 1.4rem;
-    min-height: 7rem;
+    min-height: var(--sequence-height);
     padding: 0.7rem 0;
     overflow: hidden;
   }

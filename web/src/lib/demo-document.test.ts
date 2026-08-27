@@ -56,6 +56,7 @@ describe('demoDocument contract shape', () => {
       'events',
       'handshake',
       'id',
+      'midStream',
       'originalBytes',
       'packetNumbers',
       'protocol',
