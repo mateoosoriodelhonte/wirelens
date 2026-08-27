@@ -19,6 +19,6 @@ describe('CapturePicker', () => {
     const input = screen.getByLabelText(/capture file/i);
     await fireEvent.change(input, { target: { files: [new File(['x'], 'notes.txt')] } });
     expect(onFile).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent(/PCAP or PCAPNG/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/\.pcap/i);
   });
 });
