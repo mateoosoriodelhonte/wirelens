@@ -1,4 +1,5 @@
 packages:
+  - benchmarks
   - fixtures
   - schema
   - web

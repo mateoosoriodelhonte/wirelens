@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wirelens.local/schema/benchmark-result-v1.json",
+  "title": "WireLens benchmark result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "metadata", "fixtures"],
+  "properties": {
+    "schemaVersion": { "const": "wirelens-benchmark/v1" },
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "fixtures": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "allOf": [
+        { "contains": { "type": "object", "properties": { "profile": { "const": "small" } } } },
+        { "contains": { "type": "object", "properties": { "profile": { "const": "medium" } } } },
+        { "contains": { "type": "object", "properties": { "profile": { "const": "limit-near" } } } }
+      ],
+      "items": { "$ref": "#/$defs/fixture" }
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hardware", "os", "browser", "runtime", "buildType", "command", "runCount"],
+      "properties": {
+        "hardware": { "type": "string", "minLength": 1 },
+        "os": { "type": "string", "minLength": 1 },
+        "browser": { "type": ["string", "null"] },
+        "runtime": { "type": "string", "minLength": 1 },
+        "buildType": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 },
+        "runCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "samples": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["samples", "median"],
+      "properties": {
+        "samples": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } },
+        "median": { "type": "number", "minimum": 0 }
+      }
+    },
+    "memory": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["samples", "median", "supported"],
+          "properties": {
+            "samples": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "number", "minimum": 0 }
+            },
+            "median": { "type": "number", "minimum": 0 },
+            "supported": { "const": true }
+          },
+          "required": ["samples", "median", "supported"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["samples", "median", "supported"],
+          "properties": {
+            "samples": { "type": "array", "maxItems": 0 },
+            "median": { "type": "null" },
+            "supported": { "const": false }
+          }
+        }
+      ]
+    },
+    "native": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parseMs", "jsonSerializationMs", "peakMemoryBytes"],
+      "properties": {
+        "parseMs": { "$ref": "#/$defs/samples" },
+        "jsonSerializationMs": { "$ref": "#/$defs/samples" },
+        "peakMemoryBytes": { "$ref": "#/$defs/memory" }
+      }
+    },
+    "wasm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "moduleStartupMs",
+        "parseAndSerializationMs",
+        "bridgeDecodeJsonMs",
+        "wasmLinearMemoryPeakBytes",
+        "peakMemoryBytes"
+      ],
+      "properties": {
+        "moduleStartupMs": { "$ref": "#/$defs/samples" },
+        "parseAndSerializationMs": { "$ref": "#/$defs/samples" },
+        "bridgeDecodeJsonMs": { "$ref": "#/$defs/samples" },
+        "wasmLinearMemoryPeakBytes": { "$ref": "#/$defs/memory" },
+        "peakMemoryBytes": { "$ref": "#/$defs/memory" }
+      }
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workerRoundTripMs", "firstOverviewMs", "filterLatencyMs", "peakMemoryBytes"],
+      "properties": {
+        "workerRoundTripMs": { "$ref": "#/$defs/samples" },
+        "firstOverviewMs": { "$ref": "#/$defs/samples" },
+        "filterLatencyMs": { "$ref": "#/$defs/samples" },
+        "peakMemoryBytes": { "$ref": "#/$defs/memory" }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "bytes", "packetCount", "native", "wasm", "browser"],
+      "properties": {
+        "profile": { "enum": ["small", "medium", "limit-near"] },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "packetCount": { "type": "integer", "minimum": 0 },
+        "native": { "anyOf": [{ "$ref": "#/$defs/native" }, { "type": "null" }] },
+        "wasm": { "anyOf": [{ "$ref": "#/$defs/wasm" }, { "type": "null" }] },
+        "browser": { "anyOf": [{ "$ref": "#/$defs/browser" }, { "type": "null" }] }
+      }
+    }
+  }
+}

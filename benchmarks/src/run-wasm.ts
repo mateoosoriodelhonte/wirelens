@@ -1,0 +1,22 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { runWasmBenchmark } from './wasm.ts';
+
+const args = process.argv.slice(2).filter((value) => value !== '--');
+const modulePath = args[0];
+if (!modulePath) {
+  console.error('Usage: pnpm --dir benchmarks run-wasm -- WEBASSEMBLY_MODULE [OUTPUT]');
+  process.exitCode = 2;
+} else {
+  const output = args[1] ?? 'results/wasm.json';
+  const result = await runWasmBenchmark({
+    modulePath,
+    runs: Number(process.env.WIRELENS_BENCHMARK_RUNS ?? 10),
+    warmup: Number(process.env.WIRELENS_BENCHMARK_WARMUP ?? 2),
+    buildType: process.env.WIRELENS_BENCHMARK_BUILD_TYPE ?? 'unknown',
+    command: `pnpm --dir benchmarks run-wasm -- ${modulePath} ${output}`,
+  });
+  await mkdir(dirname(output), { recursive: true });
+  await writeFile(output, `${JSON.stringify(result, null, 2)}\n`);
+  console.log(`Wrote benchmark result to ${output}`);
+}

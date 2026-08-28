@@ -1,0 +1,197 @@
+import { expect, test, type Page } from '@playwright/test';
+import { buildBenchmarkCapture } from '../../../benchmarks/src/fixtures';
+import {
+  validateBenchmarkResult,
+  type BenchmarkResult,
+  type MemorySamples,
+  type Samples,
+} from '../../../benchmarks/src/result';
+
+const RUNS = 3;
+
+function summarize(values: number[]): Samples {
+  const ordered = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(ordered.length / 2);
+  return {
+    samples: values,
+    median:
+      ordered.length % 2 === 0 ? (ordered[middle - 1] + ordered[middle]) / 2 : ordered[middle],
+  };
+}
+
+interface WasmMeasurement {
+  moduleStartupMs: number;
+  parseAndSerializationMs: number;
+  bridgeDecodeJsonMs: number;
+  wasmLinearMemoryPeakBytes: number;
+  workerRoundTripMs: number;
+}
+
+async function measureWasmInPage(page: Page, bytes: Uint8Array): Promise<WasmMeasurement> {
+  return page.evaluate(async (input: number[]) => {
+    const bytes = Uint8Array.from(input);
+    const startupStart = performance.now();
+    const namespace = (await import('/wasm/wirelens.js')) as Record<string, unknown>;
+    const factory = namespace.default ?? namespace;
+    const module = await (
+      factory as (
+        options: Record<string, unknown>,
+      ) =>
+        | Promise<Record<string, unknown> & { HEAPU8: Uint8Array }>
+        | (Record<string, unknown> & { HEAPU8: Uint8Array })
+    )({
+      locateFile: (name: string) => `/wasm/${name}`,
+    });
+    const moduleStartupMs = performance.now() - startupStart;
+    const call = (name: string, ...args: number[]): number => {
+      const fn = module[name] ?? module[`_${name}`];
+      if (typeof fn !== 'function') throw new Error(`missing WASM export ${name}`);
+      return (fn as (...values: number[]) => number)(...args);
+    };
+    const pointer = call('wirelens_alloc', bytes.byteLength);
+    if (!pointer) throw new Error('WASM allocation failed');
+    module.HEAPU8.set(bytes, pointer);
+    const parseStart = performance.now();
+    const handle = call('wirelens_parse_owned', pointer, bytes.byteLength);
+    const parseAndSerializationMs = performance.now() - parseStart;
+    if (!handle || !call('wirelens_result_ok', handle)) throw new Error('WASM parse failed');
+    const decodeStart = performance.now();
+    const jsonPointer = call('wirelens_result_data', handle);
+    const jsonSize = call('wirelens_result_size', handle);
+    const text = new TextDecoder().decode(
+      module.HEAPU8.subarray(jsonPointer, jsonPointer + jsonSize),
+    );
+    const document = JSON.parse(text);
+    const bridgeDecodeJsonMs = performance.now() - decodeStart;
+    const workerUrl = URL.createObjectURL(
+      new Blob(['self.onmessage = (event) => self.postMessage(event.data);'], {
+        type: 'text/javascript',
+      }),
+    );
+    const worker = new Worker(workerUrl);
+    const workerRoundTripMs = await new Promise<number>((resolve) => {
+      const workerStart = performance.now();
+      worker.onmessage = () => resolve(performance.now() - workerStart);
+      worker.postMessage(document);
+    });
+    worker.terminate();
+    URL.revokeObjectURL(workerUrl);
+    call('wirelens_release', handle);
+    return {
+      moduleStartupMs,
+      parseAndSerializationMs,
+      bridgeDecodeJsonMs,
+      wasmLinearMemoryPeakBytes: module.HEAPU8.byteLength,
+      workerRoundTripMs,
+    };
+  }, Array.from(bytes));
+}
+
+test('records browser and WASM benchmark measurements without timing thresholds', async ({
+  page,
+  browserName,
+}, testInfo) => {
+  test.skip(process.env.WIRELENS_BENCHMARK !== '1', 'Opt-in benchmark; set WIRELENS_BENCHMARK=1');
+  test.skip(browserName !== 'chromium', 'Browser memory and benchmark evidence require Chromium');
+  test.setTimeout(180_000);
+  const fixtures: BenchmarkResult['fixtures'] = [];
+  for (const profile of [
+    { name: 'small', packetCount: 3 },
+    { name: 'medium', packetCount: 1024 },
+  ] as const) {
+    const capture = buildBenchmarkCapture(profile);
+    const wasm: Record<
+      | 'moduleStartupMs'
+      | 'parseAndSerializationMs'
+      | 'bridgeDecodeJsonMs'
+      | 'wasmLinearMemoryPeakBytes',
+      number[]
+    > = {
+      moduleStartupMs: [],
+      parseAndSerializationMs: [],
+      bridgeDecodeJsonMs: [],
+      wasmLinearMemoryPeakBytes: [],
+    };
+    const workerRoundTrip: number[] = [];
+    const firstOverview: number[] = [];
+    const filterLatency: number[] = [];
+    for (let run = 0; run < RUNS; run += 1) {
+      await page.goto('/');
+      const start = await page.evaluate(() => performance.now());
+      await page.getByLabel('Capture file').setInputFiles({
+        name: `${profile.name}.pcap`,
+        mimeType: 'application/vnd.tcpdump.pcap',
+        buffer: Buffer.from(capture.bytes),
+      });
+      await expect(page.getByRole('heading', { name: 'Capture overview' })).toBeVisible();
+      const overviewEnd = await page.evaluate(() => performance.now());
+      firstOverview.push(overviewEnd - start);
+      const filterStart = await page.evaluate(() => performance.now());
+      await page.getByLabel('Packet filter').fill('tcp');
+      await expect(
+        page.getByText(new RegExp(`Showing all ${profile.packetCount} packets\\.`)),
+      ).toBeVisible();
+      filterLatency.push((await page.evaluate(() => performance.now())) - filterStart);
+      const measurement = await measureWasmInPage(page, capture.bytes);
+      wasm.moduleStartupMs.push(measurement.moduleStartupMs);
+      wasm.parseAndSerializationMs.push(measurement.parseAndSerializationMs);
+      wasm.bridgeDecodeJsonMs.push(measurement.bridgeDecodeJsonMs);
+      wasm.wasmLinearMemoryPeakBytes.push(measurement.wasmLinearMemoryPeakBytes);
+      workerRoundTrip.push(measurement.workerRoundTripMs);
+    }
+    // measureUserAgentSpecificMemory() is a point-in-time snapshot, not a peak.
+    // Keep browser memory explicitly unsupported until a bounded sampler exists.
+    const memory: MemorySamples = { samples: [], median: null, supported: false };
+    fixtures.push({
+      profile: profile.name,
+      bytes: capture.bytes.byteLength,
+      packetCount: profile.packetCount,
+      native: null,
+      wasm: {
+        moduleStartupMs: summarize(wasm.moduleStartupMs),
+        parseAndSerializationMs: summarize(wasm.parseAndSerializationMs),
+        bridgeDecodeJsonMs: summarize(wasm.bridgeDecodeJsonMs),
+        wasmLinearMemoryPeakBytes: {
+          samples: wasm.wasmLinearMemoryPeakBytes,
+          median: summarize(wasm.wasmLinearMemoryPeakBytes).median,
+          supported: true,
+        },
+        peakMemoryBytes: memory,
+      },
+      browser: {
+        workerRoundTripMs: summarize(workerRoundTrip),
+        firstOverviewMs: summarize(firstOverview),
+        filterLatencyMs: summarize(filterLatency),
+        peakMemoryBytes: memory,
+      },
+    });
+  }
+  fixtures.push({
+    profile: 'limit-near',
+    bytes: buildBenchmarkCapture({ name: 'limit-near', packetCount: 65_535 }).bytes.byteLength,
+    packetCount: 65_535,
+    native: null,
+    wasm: null,
+    browser: null,
+  });
+  const browserResult = validateBenchmarkResult({
+    schemaVersion: 'wirelens-benchmark/v1',
+    metadata: {
+      hardware: `browser-reported ${await page.evaluate(() => navigator.hardwareConcurrency ?? 'unknown')} logical CPUs`,
+      os: await page.evaluate(() => navigator.platform || 'unknown'),
+      browser: testInfo.project.name,
+      runtime: await page.evaluate(() => navigator.userAgent),
+      buildType: 'production',
+      command:
+        'pnpm --dir web test:e2e --project=' +
+        testInfo.project.name +
+        ' benchmark-performance.spec.ts',
+      runCount: RUNS,
+    },
+    fixtures,
+  });
+  await testInfo.attach('benchmark-result.json', {
+    body: Buffer.from(`${JSON.stringify(browserResult, null, 2)}\n`),
+    contentType: 'application/json',
+  });
+});

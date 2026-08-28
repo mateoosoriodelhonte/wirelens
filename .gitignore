@@ -27,6 +27,10 @@ test-results/
 web/playwright-report/
 web/test-results/
 
+# Generated benchmark captures and local measurement reports
+benchmarks/generated/
+benchmarks/results/
+
 # Local configuration and secrets
 .env
 .env.*
