@@ -5,6 +5,8 @@
   import CapturePicker from '$lib/components/CapturePicker.svelte';
   import ConversationList from '$lib/components/ConversationList.svelte';
   import DnsExchangeList from '$lib/components/DnsExchangeList.svelte';
+  import FilterSearch from '$lib/components/FilterSearch.svelte';
+  import HexView from '$lib/components/HexView.svelte';
   import HttpExchangeList from '$lib/components/HttpExchangeList.svelte';
   import ObservationList from '$lib/components/ObservationList.svelte';
   import PacketDetails from '$lib/components/PacketDetails.svelte';
@@ -12,8 +14,10 @@
   import TcpSequence from '$lib/components/TcpSequence.svelte';
   import TlsHandshakeList from '$lib/components/TlsHandshakeList.svelte';
   import { createCaptureStore, type CaptureState, type CaptureStore } from '$lib/capture-store';
+  import { filterPackets } from '$lib/filter';
+  import { buildSearchIndex, searchPackets } from '$lib/search';
   import { ParserClient } from '$lib/worker/parser-client';
-  import type { CaptureDocument } from '$lib/model';
+  import type { ByteRange, CaptureDocument, Packet } from '$lib/model';
 
   let captureState = $state<CaptureState>({ status: 'empty' });
   let captureStore: CaptureStore | null = null;
@@ -22,6 +26,11 @@
   let isBrowser = $state(false);
   let focusedFileName = $state<string | null>(null);
   let activeSection = $state('overview');
+  let filterValue = $state('');
+  let searchValue = $state('');
+  let filterError = $state<string | null>(null);
+  let lastValidFilterPacketIds = $state<string[] | null>(null);
+  let selectedByteRange = $state<ByteRange | null>(null);
   const sections = [
     ['overview', 'Overview'],
     ['conversations', 'Conversations'],
@@ -34,13 +43,21 @@
   const document = $derived<CaptureDocument | null>(
     captureState.status === 'ready' ? captureState.document : null,
   );
+  const searchIndex = $derived(document ? buildSearchIndex(document) : null);
+  const visiblePackets = $derived.by((): Packet[] => {
+    if (!document) return [];
+    const filterIds = new Set(lastValidFilterPacketIds ?? document.packets.map(({ id }) => id));
+    const filtered = document.packets.filter(({ id }) => filterIds.has(id));
+    if (!searchValue.trim() || !searchIndex) return filtered;
+    const searchPacketNumbers = new Set(
+      searchPackets(searchIndex, searchValue).map(({ packetNumber }) => packetNumber),
+    );
+    return filtered.filter(({ number }) => searchPacketNumbers.has(number));
+  });
   const selectedPacket = $derived.by(() => {
     const state = captureState;
     if (state.status !== 'ready') return undefined;
-    return (
-      state.document.packets.find((packet) => packet.id === state.selectedPacketId) ??
-      state.document.packets[0]
-    );
+    return visiblePackets.find((packet) => packet.id === state.selectedPacketId);
   });
   const selectedFlow = $derived(
     document?.flows.find((flow) => flow.id === selectedFlowId) ?? document?.flows[0],
@@ -75,6 +92,11 @@
       } else if (next.document !== lastReadyDocument) {
         lastReadyDocument = next.document;
         selectedFlowId = next.document.flows[0]?.id ?? '';
+        filterValue = '';
+        searchValue = '';
+        filterError = null;
+        lastValidFilterPacketIds = next.document.packets.map(({ id }) => id);
+        selectedByteRange = null;
       }
     });
     return () => {
@@ -119,12 +141,60 @@
   }
 
   function selectPacket(id: string) {
+    selectedByteRange = null;
     captureStore?.selectPacket(id);
+  }
+
+  function visiblePacketIds(filterIds: readonly string[], query: string): string[] {
+    if (!document) return [];
+    const allowed = new Set(filterIds);
+    if (!query.trim())
+      return document.packets.filter(({ id }) => allowed.has(id)).map(({ id }) => id);
+    const index = searchIndex ?? buildSearchIndex(document);
+    const matches = new Set(searchPackets(index, query).map(({ packetNumber }) => packetNumber));
+    return document.packets
+      .filter(({ id, number }) => allowed.has(id) && matches.has(number))
+      .map(({ id }) => id);
+  }
+
+  function selectFirstVisibleIfNeeded(ids: readonly string[]) {
+    if (captureState.status !== 'ready') return;
+    if (captureState.selectedPacketId && ids.includes(captureState.selectedPacketId)) return;
+    if (ids[0]) selectPacket(ids[0]);
+  }
+
+  function handleFilterChange(value: string) {
+    filterValue = value;
+    if (!document) return;
+    const result = filterPackets(document, value);
+    if (!result.ok) {
+      filterError = result.error.message;
+      return;
+    }
+    filterError = null;
+    lastValidFilterPacketIds = result.packets.map(({ id }) => id);
+    selectFirstVisibleIfNeeded(visiblePacketIds(lastValidFilterPacketIds, searchValue));
+  }
+
+  function handleSearchChange(value: string) {
+    searchValue = value;
+    if (!document) return;
+    const filterIds = lastValidFilterPacketIds ?? document.packets.map(({ id }) => id);
+    selectFirstVisibleIfNeeded(visiblePacketIds(filterIds, value));
+  }
+
+  function resetInspectionTools() {
+    if (!document) return;
+    filterValue = '';
+    searchValue = '';
+    filterError = null;
+    lastValidFilterPacketIds = document.packets.map(({ id }) => id);
   }
 
   async function selectEvidencePacket(packetNumber: number) {
     const packet = document?.packets.find((candidate) => candidate.number === packetNumber);
     if (!packet) return;
+    resetInspectionTools();
     if (packet.flowId) selectedFlowId = packet.flowId;
     selectPacket(packet.id);
     await tick();
@@ -220,16 +290,58 @@
       <HttpExchangeList exchanges={document.httpExchanges} onSelectPacket={selectEvidencePacket} />
       <TlsHandshakeList handshakes={document.tlsHandshakes} onSelectPacket={selectEvidencePacket} />
       <ObservationList observations={otherObservations} onSelectPacket={selectEvidencePacket} />
+      <FilterSearch
+        {filterValue}
+        {searchValue}
+        {filterError}
+        resultCount={visiblePackets.length}
+        totalCount={document.packets.length}
+        onFilterChange={handleFilterChange}
+        onSearchChange={handleSearchChange}
+      />
       <div class="split packet-split">
         <PacketTable
           {document}
+          packets={visiblePackets}
           selectedPacketId={captureState.status === 'ready'
             ? (captureState.selectedPacketId ?? '')
             : ''}
           onSelect={selectPacket}
         />
-        {#if selectedPacket}<PacketDetails packet={selectedPacket} {learningMode} />{/if}
+        <div class="inspection-stack">
+          {#if selectedPacket}
+            <PacketDetails
+              packet={selectedPacket}
+              {learningMode}
+              {selectedByteRange}
+              onSelectByteRange={(range) => (selectedByteRange = range)}
+            />
+          {:else}
+            <section class="no-packets" aria-label="No matching packet details">
+              <strong>No matching packet is selected.</strong>
+              <p>Clear or change the filter and search to inspect packet details.</p>
+            </section>
+          {/if}
+        </div>
       </div>
+      {#if selectedPacket}
+        <HexView
+          bytes={captureState.status === 'ready' &&
+          captureState.packetBytes.status === 'ready' &&
+          captureState.packetBytes.packetId === selectedPacket.id
+            ? captureState.packetBytes.buffer
+            : null}
+          loading={captureState.status === 'ready' &&
+            captureState.packetBytes.status === 'loading' &&
+            captureState.packetBytes.packetId === selectedPacket.id}
+          error={captureState.status === 'ready' &&
+          captureState.packetBytes.status === 'error' &&
+          captureState.packetBytes.packetId === selectedPacket.id
+            ? captureState.packetBytes.error.message
+            : null}
+          fieldRange={selectedByteRange}
+        />
+      {/if}
     </div>
   {/if}
 </main>
@@ -391,7 +503,24 @@
     gap: 1rem;
   }
   .packet-split {
+    align-items: start;
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  }
+  .inspection-stack {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    min-width: 0;
+  }
+  .no-packets {
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--surface);
+    color: var(--muted);
+  }
+  .no-packets p {
+    margin: 0.35rem 0 0;
   }
   .processing,
   .parse-error {

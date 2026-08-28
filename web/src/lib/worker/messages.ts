@@ -68,7 +68,12 @@ export function isWorkerResponse(value: unknown): value is WorkerResponse {
   if (typeof requestId !== 'string') return false;
   if (response.type === 'failed') return isParseError((response as { error?: unknown }).error);
   if (response.type === 'packet-bytes') {
-    return typeof response.packetIndex === 'number' && response.buffer instanceof ArrayBuffer;
+    return (
+      typeof response.packetIndex === 'number' &&
+      Number.isInteger(response.packetIndex) &&
+      response.packetIndex >= 0 &&
+      response.buffer instanceof ArrayBuffer
+    );
   }
   return (
     response.type === 'parse-complete' &&

@@ -198,9 +198,24 @@ export function createCaptureWorker(
       );
       return;
     }
-    const pointer = module.wirelens_packet_data(activeHandle, request.packetIndex);
-    const size = module.wirelens_packet_size(activeHandle, request.packetIndex);
-    if (!pointer) {
+    let pointer: number;
+    let size: number;
+    try {
+      pointer = module.wirelens_packet_data(activeHandle, request.packetIndex);
+      size = module.wirelens_packet_size(activeHandle, request.packetIndex);
+    } catch {
+      pointer = 0;
+      size = 0;
+    }
+    const heapLength = module.HEAPU8.byteLength;
+    const validRange =
+      Number.isSafeInteger(pointer) &&
+      pointer > 0 &&
+      pointer <= heapLength &&
+      Number.isSafeInteger(size) &&
+      size >= 0 &&
+      size <= heapLength - pointer;
+    if (!validRange) {
       scope.postMessage(
         failed(request.requestId, {
           code: 'TRUNCATED_PACKET_DATA',

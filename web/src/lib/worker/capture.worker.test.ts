@@ -8,6 +8,7 @@ import { createCaptureWorker } from './capture.worker';
 import { loadWasmModule } from '../wasm/module';
 import type { WasmModule } from '../wasm/module';
 import { MAX_CAPTURE_BYTES } from './limits';
+import { demoDocument } from '../demo-document';
 
 class WorkerHarness {
   readonly responses: Array<{ response: WorkerResponse; transfer: Transferable[] }> = [];
@@ -23,7 +24,7 @@ class WorkerHarness {
 }
 
 const fakeModule = (overrides: Partial<WasmModule> = {}): WasmModule => {
-  const heap = new Uint8Array(1024);
+  const heap = new Uint8Array(16 * 1024);
   return {
     HEAPU8: heap,
     wirelens_alloc: () => 8,
@@ -318,6 +319,67 @@ describe('capture worker with the generated Emscripten module', () => {
     expect(failed.response).toMatchObject({
       type: 'failed',
       error: { code: 'TRUNCATED_PACKET_DATA' },
+    });
+  });
+
+  it('rejects a packet range that extends beyond the wasm heap', async () => {
+    const harness = new WorkerHarness();
+    const module = fakeModule({
+      wirelens_alloc: () => 15_000,
+      wirelens_result_ok: () => 1,
+      wirelens_result_data: () => 8,
+      wirelens_result_size: () => new TextEncoder().encode(JSON.stringify(demoDocument)).byteLength,
+      wirelens_packet_data: () => 16 * 1024 - 4,
+      wirelens_packet_size: () => 16,
+    });
+    module.HEAPU8.set(new TextEncoder().encode(JSON.stringify(demoDocument)), 8);
+    createCaptureWorker(harness, async () => module);
+
+    harness.send({
+      type: 'parse',
+      requestId: 'request-parse-range',
+      fileName: 'capture.pcap',
+      buffer: new ArrayBuffer(1),
+    });
+    await waitForResponse(harness, 'request-parse-range');
+
+    harness.send({ type: 'packet-bytes', requestId: 'request-range', packetIndex: 0 });
+    const failed = await waitForResponse(harness, 'request-range');
+    expect(failed.response).toMatchObject({
+      type: 'failed',
+      requestId: 'request-range',
+      error: { code: 'TRUNCATED_PACKET_DATA', packetNumber: 1 },
+    });
+    expect(failed.transfer).toHaveLength(0);
+  });
+
+  it('rejects an unsafe packet size without reading outside the wasm heap', async () => {
+    const harness = new WorkerHarness();
+    const module = fakeModule({
+      wirelens_alloc: () => 15_000,
+      wirelens_result_ok: () => 1,
+      wirelens_result_data: () => 8,
+      wirelens_result_size: () => new TextEncoder().encode(JSON.stringify(demoDocument)).byteLength,
+      wirelens_packet_data: () => 16,
+      wirelens_packet_size: () => Number.MAX_SAFE_INTEGER,
+    });
+    module.HEAPU8.set(new TextEncoder().encode(JSON.stringify(demoDocument)), 8);
+    createCaptureWorker(harness, async () => module);
+
+    harness.send({
+      type: 'parse',
+      requestId: 'request-parse-size',
+      fileName: 'capture.pcap',
+      buffer: new ArrayBuffer(1),
+    });
+    await waitForResponse(harness, 'request-parse-size');
+
+    harness.send({ type: 'packet-bytes', requestId: 'request-size', packetIndex: 0 });
+    const failed = await waitForResponse(harness, 'request-size');
+    expect(failed.response).toMatchObject({
+      type: 'failed',
+      requestId: 'request-size',
+      error: { code: 'TRUNCATED_PACKET_DATA', packetNumber: 1 },
     });
   });
 });
