@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <optional>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -128,19 +128,18 @@ bool parse_extensions(const std::vector<std::byte>& bytes, const std::size_t beg
         const auto listLength = std::to_integer<std::uint8_t>(bytes[cursor]);
         if (listLength != size - 1U || listLength < 2U || (listLength % 2U) != 0U)
           return false;
-        {
-          for (std::size_t item = cursor + 1U; item + 1U < cursor + 1U + listLength; item += 2U) {
-            if (const auto offered = version(u16(bytes, item)))
-              hello.offeredVersions.push_back(*offered);
-          }
+        const auto offeredCount = listLength / 2U;
+        if (offeredCount > kMaxTlsOfferedVersions)
+          return false;
+        for (std::size_t item = cursor + 1U; item + 1U < cursor + 1U + listLength; item += 2U) {
+          if (const auto offered = version(u16(bytes, item)))
+            hello.offeredVersions.push_back(*offered);
         }
       } else if (!hello.client && size == 2U) {
         hello.negotiatedVersion = version(u16(bytes, cursor));
       } else {
         return false;
       }
-      if (hello.offeredVersions.size() > kMaxTlsOfferedVersions)
-        return false;
     }
     cursor += size;
   }
@@ -160,8 +159,10 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
     if (recordLength > kMaxTlsRecordBytes) {
       add_diagnostic(capture, {"warning", "TLS_RECORD_LIMIT", "TLS record exceeds the 18 KiB limit",
                                stream.flowId, std::nullopt,
-                               stream.packetNumbers.empty() ? std::nullopt
-                                                             : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+                               stream.packetNumbers.empty()
+                                   ? std::nullopt
+                                   : std::optional<std::size_t>{stream.packetNumbers.front()},
+                               1U});
       return std::nullopt;
     }
     if (recordLength < 4U || recordLength > bytes.size() - cursor - 5U)
@@ -171,10 +172,13 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
     const auto handshakeLength = u24(bytes, body + 1U);
     if ((handshakeType != 1U && handshakeType != 2U) || handshakeLength > kMaxTlsHandshakeBytes) {
       if (handshakeType == 1U || handshakeType == 2U)
-        add_diagnostic(capture, {"warning", "TLS_HANDSHAKE_LIMIT", "TLS handshake exceeds the 16 KiB limit",
-                                 stream.flowId, std::nullopt,
-                                 stream.packetNumbers.empty() ? std::nullopt
-                                                               : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+        add_diagnostic(capture,
+                       {"warning", "TLS_HANDSHAKE_LIMIT", "TLS handshake exceeds the 16 KiB limit",
+                        stream.flowId, std::nullopt,
+                        stream.packetNumbers.empty()
+                            ? std::nullopt
+                            : std::optional<std::size_t>{stream.packetNumbers.front()},
+                        1U});
       return std::nullopt;
     }
     if (handshakeLength + 4U > recordLength || handshakeLength + 4U > bytes.size() - body)
@@ -192,38 +196,51 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
       if (position >= helloEnd)
         return std::nullopt;
       const auto sessionLength = std::to_integer<std::uint8_t>(bytes[position++]);
-      if (sessionLength > helloEnd - position)
+      if (sessionLength > 32U || sessionLength > helloEnd - position)
         return std::nullopt;
       position += sessionLength;
       if (position + 2U > helloEnd)
         return std::nullopt;
       const auto cipherLength = u16(bytes, position);
       position += 2U;
-      if ((cipherLength % 2U) != 0U || cipherLength > helloEnd - position)
+      if (cipherLength == 0U || (cipherLength % 2U) != 0U || cipherLength > helloEnd - position)
         return std::nullopt;
       position += cipherLength;
       if (position >= helloEnd)
         return std::nullopt;
       const auto compressionLength = std::to_integer<std::uint8_t>(bytes[position++]);
-      if (compressionLength > helloEnd - position)
+      if (compressionLength == 0U || compressionLength > helloEnd - position)
         return std::nullopt;
+      for (std::size_t index = 0; index < compressionLength; ++index)
+        if (bytes[position + index] != std::byte{0})
+          return std::nullopt;
       position += compressionLength;
       const auto helloPackets = evidence_packets(stream, helloEnd);
-      Hello result{true, helloPackets.empty() ? 0U : helloPackets.front(),
-                   helloEnd <= stream.bytePacketNumbers.size() ? stream.bytePacketNumbers[helloEnd - 1U]
-                                                               : (helloPackets.empty() ? 0U : helloPackets.back()),
-                   helloPackets, *recordVersionValueName, *legacy, {}, std::nullopt, std::nullopt};
+      Hello result{true,
+                   helloPackets.empty() ? 0U : helloPackets.front(),
+                   helloEnd <= stream.bytePacketNumbers.size()
+                       ? stream.bytePacketNumbers[helloEnd - 1U]
+                       : (helloPackets.empty() ? 0U : helloPackets.back()),
+                   helloPackets,
+                   *recordVersionValueName,
+                   *legacy,
+                   {},
+                   std::nullopt,
+                   std::nullopt};
       if (position + 2U <= helloEnd) {
         const auto extensionLength = u16(bytes, position);
         position += 2U;
-        if (extensionLength > helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
+        if (extensionLength != helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
           return std::nullopt;
         if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
           if (serverNameLimit)
-            add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT", "TLS server name exceeds the 253 byte limit",
-                                     stream.flowId, std::nullopt,
-                                     stream.packetNumbers.empty() ? std::nullopt
-                                                                   : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+            add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT",
+                                     "TLS server name exceeds the 253 byte limit", stream.flowId,
+                                     std::nullopt,
+                                     stream.packetNumbers.empty()
+                                         ? std::nullopt
+                                         : std::optional<std::size_t>{stream.packetNumbers.front()},
+                                     1U});
           return std::nullopt;
         }
       } else if (position != helloEnd) {
@@ -242,33 +259,42 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
     if (position >= helloEnd)
       return std::nullopt;
     const auto sessionLength = std::to_integer<std::uint8_t>(bytes[position++]);
-    if (sessionLength > helloEnd - position)
+    if (sessionLength > 32U || sessionLength > helloEnd - position)
       return std::nullopt;
     position += sessionLength;
     if (position + 3U > helloEnd)
       return std::nullopt;
     const auto cipherLength = 2U;
     position += cipherLength;
-    const auto compressionLength = std::to_integer<std::uint8_t>(bytes[position++]);
-    if (compressionLength > helloEnd - position)
+    const auto compressionMethod = std::to_integer<std::uint8_t>(bytes[position++]);
+    if (compressionMethod != 0U)
       return std::nullopt;
-    position += compressionLength;
     const auto helloPackets = evidence_packets(stream, helloEnd);
-    Hello result{false, helloPackets.empty() ? 0U : helloPackets.front(),
-                 helloEnd <= stream.bytePacketNumbers.size() ? stream.bytePacketNumbers[helloEnd - 1U]
-                                                             : (helloPackets.empty() ? 0U : helloPackets.back()),
-                 helloPackets, *recordVersionValueName, *legacy, {}, std::nullopt, std::nullopt};
+    Hello result{false,
+                 helloPackets.empty() ? 0U : helloPackets.front(),
+                 helloEnd <= stream.bytePacketNumbers.size()
+                     ? stream.bytePacketNumbers[helloEnd - 1U]
+                     : (helloPackets.empty() ? 0U : helloPackets.back()),
+                 helloPackets,
+                 *recordVersionValueName,
+                 *legacy,
+                 {},
+                 std::nullopt,
+                 std::nullopt};
     if (position + 2U <= helloEnd) {
       const auto extensionLength = u16(bytes, position);
       position += 2U;
-      if (extensionLength > helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
+      if (extensionLength != helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
         return std::nullopt;
       if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
         if (serverNameLimit)
-          add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT", "TLS server name exceeds the 253 byte limit",
-                                   stream.flowId, std::nullopt,
-                                   stream.packetNumbers.empty() ? std::nullopt
-                                                                 : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+          add_diagnostic(capture,
+                         {"warning", "TLS_SERVER_NAME_LIMIT",
+                          "TLS server name exceeds the 253 byte limit", stream.flowId, std::nullopt,
+                          stream.packetNumbers.empty()
+                              ? std::nullopt
+                              : std::optional<std::size_t>{stream.packetNumbers.front()},
+                          1U});
         return std::nullopt;
       }
     } else if (position != helloEnd) {
@@ -286,22 +312,29 @@ bool recognized_tls_prefix(const ApplicationStream& stream) {
 }
 
 void tls_layer(ParsedPacket& packet, const Hello& hello) {
-  ProtocolLayer layer{"TLS", hello.client ? "TLS ClientHello" : "TLS ServerHello", {}, std::nullopt,
+  ProtocolLayer layer{"TLS",
+                      hello.client ? "TLS ClientHello" : "TLS ServerHello",
+                      {},
+                      std::nullopt,
                       std::string{"tls"}};
   layer.fields.push_back({"recordVersion", hello.recordVersion, std::nullopt, std::nullopt});
   layer.fields.push_back({"legacyVersion", hello.legacyVersion, std::nullopt, std::nullopt});
   if (hello.client)
-    layer.fields.push_back({"offeredVersions", [&] {
+    layer.fields.push_back({"offeredVersions",
+                            [&] {
                               std::string value;
-                              for (std::size_t index = 0; index < hello.offeredVersions.size(); ++index) {
+                              for (std::size_t index = 0; index < hello.offeredVersions.size();
+                                   ++index) {
                                 if (index != 0U)
                                   value += ", ";
                                 value += hello.offeredVersions[index];
                               }
                               return value;
-                            }(), std::nullopt, std::nullopt});
+                            }(),
+                            std::nullopt, std::nullopt});
   else if (hello.negotiatedVersion)
-    layer.fields.push_back({"negotiatedVersion", *hello.negotiatedVersion, std::nullopt, std::nullopt});
+    layer.fields.push_back(
+        {"negotiatedVersion", *hello.negotiatedVersion, std::nullopt, std::nullopt});
   if (hello.serverName)
     layer.fields.push_back({"serverName", *hello.serverName, std::nullopt, std::nullopt});
   packet.packet.layers.push_back(std::move(layer));
@@ -328,12 +361,17 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                                                        diagnostic.code == "TLS_SERVER_NAME_LIMIT");
                                              });
       if (recognized_tls_prefix(stream) && !specificLimit)
-        add_diagnostic(capture, {"warning", "TLS_MALFORMED", "Recognized TLS prefix failed strict record or handshake parsing",
+        add_diagnostic(capture, {"warning", "TLS_MALFORMED",
+                                 "Recognized TLS prefix failed strict record or handshake parsing",
                                  stream.flowId, std::nullopt,
-                                 stream.packetNumbers.empty() ? std::nullopt
-                                                               : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+                                 stream.packetNumbers.empty()
+                                     ? std::nullopt
+                                     : std::optional<std::size_t>{stream.packetNumbers.front()},
+                                 1U});
       continue;
     }
+    if (hello->client != stream.fromClient)
+      continue;
     auto& pair = handshakes[stream.flowId];
     if (hello->client) {
       if (!pair.first)
@@ -348,7 +386,10 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
     }
   }
   for (const auto& [flowId, pair] : handshakes) {
-    TlsHandshake handshake{"tls-handshake-0", flowId, std::nullopt, std::nullopt,
+    TlsHandshake handshake{"tls-handshake-0",
+                           flowId,
+                           std::nullopt,
+                           std::nullopt,
                            pair.first.has_value() && pair.second.has_value() &&
                                pair.first->packet < pair.second->packet,
                            "WireLens does not decrypt TLS application data."};
@@ -358,8 +399,9 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                                              pair.first->packetNumbers};
     }
     if (pair.second) {
-      handshake.serverHello = TlsServerHello{pair.second->recordVersion, pair.second->legacyVersion,
-                                             pair.second->negotiatedVersion, pair.second->packetNumbers};
+      handshake.serverHello =
+          TlsServerHello{pair.second->recordVersion, pair.second->legacyVersion,
+                         pair.second->negotiatedVersion, pair.second->packetNumbers};
     }
     capture.tlsHandshakes.push_back(std::move(handshake));
   }

@@ -72,7 +72,8 @@ ApplicationStream reconstruct(CaptureDocument& capture, const std::string& flowI
   std::map<std::int64_t, Cell> cells;
   for (const auto& original : direction.segments) {
     const auto start = original.start;
-    const auto stop = std::min<std::int64_t>(start + static_cast<std::int64_t>(original.bytes.size()), end);
+    const auto stop =
+        std::min<std::int64_t>(start + static_cast<std::int64_t>(original.bytes.size()), end);
     for (std::int64_t position = std::max(start, minimum); position < stop; ++position) {
       const auto index = static_cast<std::size_t>(position - start);
       const auto found = cells.find(position);
@@ -89,16 +90,19 @@ ApplicationStream reconstruct(CaptureDocument& capture, const std::string& flowI
   if (observedBytes > perDirectionLimit)
     result.limited = true;
   if (result.limited)
-    diagnostic(capture, "APPLICATION_DIRECTION_LIMIT", "TCP application prefix exceeded the 64 KiB direction limit",
-               flowId, direction.segments.back().packetNumber);
+    diagnostic(capture, "APPLICATION_DIRECTION_LIMIT",
+               "TCP application prefix exceeded the 64 KiB direction limit", flowId,
+               direction.segments.back().packetNumber);
 
   const auto available = std::min(cells.size(), kMaxRetainedApplicationBytesPerDirection);
   if (available > kMaxRetainedApplicationBytesPerCapture - retainedCaptureBytes) {
     result.limited = true;
-    diagnostic(capture, "APPLICATION_CAPTURE_LIMIT", "TCP application prefixes exceeded the 4 MiB capture limit",
-               flowId, direction.segments.back().packetNumber);
+    diagnostic(capture, "APPLICATION_CAPTURE_LIMIT",
+               "TCP application prefixes exceeded the 4 MiB capture limit", flowId,
+               direction.segments.back().packetNumber);
   }
-  const auto allowed = std::min(available, kMaxRetainedApplicationBytesPerCapture - retainedCaptureBytes);
+  const auto allowed =
+      std::min(available, kMaxRetainedApplicationBytesPerCapture - retainedCaptureBytes);
   std::int64_t cursor = minimum;
   for (std::size_t copied = 0; copied < allowed; ++copied, ++cursor) {
     const auto found = cells.find(cursor);
@@ -111,8 +115,8 @@ ApplicationStream reconstruct(CaptureDocument& capture, const std::string& flowI
 
   for (const auto& cell : cells) {
     if (cell.first >= minimum && cell.first < cursor &&
-        std::find(result.packetNumbers.begin(), result.packetNumbers.end(), cell.second.packetNumber) ==
-            result.packetNumbers.end())
+        std::find(result.packetNumbers.begin(), result.packetNumbers.end(),
+                  cell.second.packetNumber) == result.packetNumbers.end())
       result.packetNumbers.push_back(cell.second.packetNumber);
   }
   result.packetNumbers = unique_packets(result.packetNumbers);
@@ -132,22 +136,25 @@ ApplicationStream reconstruct(CaptureDocument& capture, const std::string& flowI
     }
   }
   if (result.gap)
-    diagnostic(capture, "APPLICATION_GAP_UNFILLED", "TCP application prefix contains an unfilled sequence gap",
-               flowId, direction.segments.back().packetNumber);
+    diagnostic(capture, "APPLICATION_GAP_UNFILLED",
+               "TCP application prefix contains an unfilled sequence gap", flowId,
+               direction.segments.back().packetNumber);
   if (result.ambiguous)
-    diagnostic(capture, "APPLICATION_OVERLAP_AMBIGUOUS", "TCP application prefix contains conflicting overlapping bytes",
-               flowId, direction.segments.back().packetNumber);
+    diagnostic(capture, "APPLICATION_OVERLAP_AMBIGUOUS",
+               "TCP application prefix contains conflicting overlapping bytes", flowId,
+               direction.segments.back().packetNumber);
   if (result.truncated)
-    diagnostic(capture, "APPLICATION_TRUNCATED", "TCP application prefix includes a truncated packet",
-               flowId, direction.segments.back().packetNumber);
+    diagnostic(capture, "APPLICATION_TRUNCATED",
+               "TCP application prefix includes a truncated packet", flowId,
+               direction.segments.back().packetNumber);
   result.complete = !result.bytes.empty() && !result.gap && !result.ambiguous && !result.truncated;
   return result;
 }
 
 } // namespace
 
-std::vector<ApplicationStream> reconstruct_tcp_prefixes(
-    CaptureDocument& capture, const std::vector<ParsedPacket>& packets) {
+std::vector<ApplicationStream> reconstruct_tcp_prefixes(CaptureDocument& capture,
+                                                        const std::vector<ParsedPacket>& packets) {
   struct FlowDirections {
     Direction client;
     Direction server;
@@ -167,12 +174,13 @@ std::vector<ApplicationStream> reconstruct_tcp_prefixes(
     const bool clientDirection = packet.packet.sourceEndpointId == flowIt->clientEndpointId;
     auto& direction = clientDirection ? directions[flow].client : directions[flow].server;
     const auto directionIndex = clientDirection ? 0U : 1U;
+    const auto payloadSequence = packet.tcp.sequence + ((packet.tcp.flags & 0x02U) != 0U ? 1U : 0U);
     auto& base = bases[flow][directionIndex];
     if (!base)
-      base = packet.tcp.sequence;
-    const auto start = sequence_offset(*base, packet.tcp.sequence);
-    direction.segments.push_back({start, packet.tcp.payload, packet.packet.number,
-                                  packet.tcp.payloadComplete});
+      base = payloadSequence;
+    const auto start = sequence_offset(*base, payloadSequence);
+    direction.segments.push_back(
+        {start, packet.tcp.payload, packet.packet.number, packet.tcp.payloadComplete});
   }
 
   std::vector<ApplicationStream> streams;
@@ -190,9 +198,11 @@ std::vector<ApplicationStream> reconstruct_tcp_prefixes(
     sortSegments(found->second.client);
     sortSegments(found->second.server);
     if (!found->second.client.segments.empty())
-      streams.push_back(reconstruct(capture, flow.id, true, found->second.client, retainedCaptureBytes));
+      streams.push_back(
+          reconstruct(capture, flow.id, true, found->second.client, retainedCaptureBytes));
     if (!found->second.server.segments.empty())
-      streams.push_back(reconstruct(capture, flow.id, false, found->second.server, retainedCaptureBytes));
+      streams.push_back(
+          reconstruct(capture, flow.id, false, found->second.server, retainedCaptureBytes));
   }
   return streams;
 }

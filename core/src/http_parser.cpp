@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
-#include <optional>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,9 +36,7 @@ bool token_char(const unsigned char value) {
 bool visible_header_value(const std::string_view value) {
   for (const auto character : value) {
     const auto byte = static_cast<unsigned char>(character);
-    if (byte < 0x20U && byte != '\t')
-      return false;
-    if (byte == 0x7fU)
+    if ((byte < 0x20U && byte != '\t') || byte > 0x7eU)
       return false;
   }
   return true;
@@ -46,7 +44,8 @@ bool visible_header_value(const std::string_view value) {
 
 bool recognized_prefix(const std::vector<std::byte>& bytes) {
   if (bytes.size() >= 5U && std::to_integer<unsigned char>(bytes[0]) == 'H' &&
-      std::to_integer<unsigned char>(bytes[1]) == 'T' && std::to_integer<unsigned char>(bytes[2]) == 'T' &&
+      std::to_integer<unsigned char>(bytes[1]) == 'T' &&
+      std::to_integer<unsigned char>(bytes[2]) == 'T' &&
       std::to_integer<unsigned char>(bytes[3]) == 'P' && bytes[4] == std::byte{'/'})
     return true;
   if (bytes.empty())
@@ -79,19 +78,21 @@ std::string trim(std::string_view value) {
 }
 
 bool secret_name(const std::string_view name) {
-  constexpr std::string_view words[] = {"authorization", "cookie", "token", "secret", "credential",
-                                        "password", "session", "jwt", "api-key", "apikey", "proxy-authorization"};
-  return std::any_of(std::begin(words), std::end(words), [&](const auto word) {
-    return name.find(word) != std::string_view::npos;
-  });
+  constexpr std::string_view words[] = {
+      "authorization", "cookie", "token",   "secret", "credential",         "password",
+      "session",       "jwt",    "api-key", "apikey", "proxy-authorization"};
+  return std::any_of(std::begin(words), std::end(words),
+                     [&](const auto word) { return name.find(word) != std::string_view::npos; });
 }
 
 HttpHeader sanitized_header(const std::string& name, const std::string& rawValue) {
   const auto normalized = lower(name);
-  constexpr std::string_view allowed[] = {"host", "content-type", "content-length", "accept",
-                                          "user-agent", "server", "date"};
-  const auto isAllowed = std::find(std::begin(allowed), std::end(allowed), normalized) != std::end(allowed);
-  if (!isAllowed || secret_name(normalized) || rawValue.size() > 8192U || !visible_header_value(rawValue))
+  constexpr std::string_view allowed[] = {
+      "host", "content-type", "content-length", "accept", "user-agent", "server", "date"};
+  const auto isAllowed =
+      std::find(std::begin(allowed), std::end(allowed), normalized) != std::end(allowed);
+  if (!isAllowed || secret_name(normalized) || rawValue.size() > 8192U ||
+      !visible_header_value(rawValue))
     return {normalized, std::nullopt, true};
   return {normalized, rawValue, false};
 }
@@ -110,8 +111,12 @@ std::string redact_target(const std::string_view target) {
     const auto end = separator == std::string_view::npos ? query.size() : separator;
     const auto part = query.substr(begin, end - begin);
     const auto equals = part.find('=');
-    result.append(part.substr(0, equals == std::string_view::npos ? part.size() : equals));
-    result += "=[redacted]";
+    if (equals == std::string_view::npos) {
+      result += "[redacted]";
+    } else {
+      result.append(part.substr(0, equals));
+      result += "=[redacted]";
+    }
     if (separator == std::string_view::npos)
       break;
     result.push_back(query[separator]);
@@ -120,6 +125,18 @@ std::string redact_target(const std::string_view target) {
   if (fragment != std::string_view::npos)
     result.append(target.substr(fragment));
   return result;
+}
+
+bool absolute_target_has_userinfo(const std::string_view target) {
+  std::string_view authority;
+  if (target.starts_with("http://"))
+    authority = target.substr(7U);
+  else if (target.starts_with("https://"))
+    authority = target.substr(8U);
+  else
+    return false;
+  authority = authority.substr(0, authority.find_first_of("/?"));
+  return authority.find('@') != std::string_view::npos;
 }
 
 std::optional<std::size_t> crlf(const std::vector<std::byte>& bytes, const std::size_t begin) {
@@ -165,10 +182,12 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
   const auto line = ascii(stream.bytes, 0, *lineEnd);
   const bool isResponse = line.starts_with("HTTP/1.0 ") || line.starts_with("HTTP/1.1 ");
   const auto firstSpace = line.find(' ');
-  const auto secondSpace = firstSpace == std::string::npos ? std::string::npos : line.find(' ', firstSpace + 1U);
-  const bool isRequest = !isResponse && firstSpace != std::string::npos && secondSpace != std::string::npos &&
-                         secondSpace > firstSpace + 1U && line.size() > secondSpace + 1U &&
-                         (line.substr(secondSpace + 1U) == "HTTP/1.0" || line.substr(secondSpace + 1U) == "HTTP/1.1");
+  const auto secondSpace =
+      firstSpace == std::string::npos ? std::string::npos : line.find(' ', firstSpace + 1U);
+  const bool isRequest =
+      !isResponse && firstSpace != std::string::npos && secondSpace != std::string::npos &&
+      secondSpace > firstSpace + 1U && line.size() > secondSpace + 1U &&
+      (line.substr(secondSpace + 1U) == "HTTP/1.0" || line.substr(secondSpace + 1U) == "HTTP/1.1");
   if (!isRequest && !isResponse)
     return std::nullopt;
 
@@ -195,14 +214,18 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
       result.end = headerEnd;
       result.packetNumbers = evidence_packets(stream, headerEnd);
       result.firstPacket = result.packetNumbers.empty() ? 0U : result.packetNumbers.front();
-      result.completionPacket = headerEnd <= stream.bytePacketNumbers.size()
-                                    ? stream.bytePacketNumbers[headerEnd - 1U]
-                                    : (result.packetNumbers.empty() ? 0U : result.packetNumbers.back());
+      result.completionPacket =
+          headerEnd <= stream.bytePacketNumbers.size()
+              ? stream.bytePacketNumbers[headerEnd - 1U]
+              : (result.packetNumbers.empty() ? 0U : result.packetNumbers.back());
       if (isRequest) {
         const auto method = line.substr(0, firstSpace);
         const auto targetRaw = line.substr(firstSpace + 1U, secondSpace - firstSpace - 1U);
-        if (!std::all_of(method.begin(), method.end(), [](const auto c) { return token_char(static_cast<unsigned char>(c)); }) ||
+        if (method.size() > kMaxHttpMethodBytes ||
+            !std::all_of(method.begin(), method.end(),
+                         [](const auto c) { return token_char(static_cast<unsigned char>(c)); }) ||
             targetRaw.empty() || targetRaw.find('#') != std::string::npos ||
+            absolute_target_has_userinfo(targetRaw) ||
             targetRaw.find_first_of(" \t\r\n") != std::string::npos ||
             !std::all_of(targetRaw.begin(), targetRaw.end(), [](const auto c) {
               const auto byte = static_cast<unsigned char>(c);
@@ -211,24 +234,32 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
           return std::nullopt;
         const auto target = redact_target(targetRaw);
         const auto version = line.substr(secondSpace + 1U);
-        result.requestValue = HttpRequest{method + " " + target + " " + version, method, target, version,
-                                          std::move(headers), result.packetNumbers};
+        result.requestValue = HttpRequest{method + " " + target + " " + version,
+                                          method,
+                                          target,
+                                          version,
+                                          std::move(headers),
+                                          result.packetNumbers};
       } else {
         const auto version = line.substr(0, 8U);
         if (line.size() < 12U)
           return std::nullopt;
         const auto status = line.substr(9U, 3U);
         if ((version != "HTTP/1.0" && version != "HTTP/1.1") ||
-            !std::all_of(status.begin(), status.end(), [](const auto c) { return std::isdigit(static_cast<unsigned char>(c)) != 0; }))
+            !std::all_of(status.begin(), status.end(), [](const auto c) {
+              return std::isdigit(static_cast<unsigned char>(c)) != 0;
+            }))
           return std::nullopt;
         const auto statusCode = static_cast<std::uint16_t>(std::stoul(status));
         if (statusCode < 100U || statusCode > 599U || line[8] != ' ')
           return std::nullopt;
-        auto reason = line.size() > 12U ? line.substr(12U) : std::string{};
-        if (!visible_header_value(reason))
+        if (line.size() > 12U && line[12] != ' ')
           return std::nullopt;
-        result.responseValue = HttpResponse{line, version, statusCode, std::move(reason), std::move(headers),
-                                            result.packetNumbers};
+        auto reason = line.size() > 13U ? line.substr(13U) : std::string{};
+        if (reason.size() > kMaxHttpReasonBytes || !visible_header_value(reason))
+          return std::nullopt;
+        result.responseValue = HttpResponse{
+            line, version, statusCode, std::move(reason), std::move(headers), result.packetNumbers};
       }
       return result;
     }
@@ -250,7 +281,10 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
 }
 
 void http_layer(ParsedPacket& packet, const Message& message) {
-  ProtocolLayer layer{"HTTP", message.request ? "HTTP request" : "HTTP response", {}, std::nullopt,
+  ProtocolLayer layer{"HTTP",
+                      message.request ? "HTTP request" : "HTTP response",
+                      {},
+                      std::nullopt,
                       std::string{"http"}};
   if (message.requestValue) {
     layer.fields.push_back({"method", message.requestValue->method, std::nullopt, std::nullopt});
@@ -258,7 +292,8 @@ void http_layer(ParsedPacket& packet, const Message& message) {
     layer.fields.push_back({"version", message.requestValue->version, std::nullopt, std::nullopt});
   } else if (message.responseValue) {
     layer.fields.push_back({"version", message.responseValue->version, std::nullopt, std::nullopt});
-    layer.fields.push_back({"statusCode", std::to_string(message.responseValue->statusCode), std::nullopt, std::nullopt});
+    layer.fields.push_back({"statusCode", std::to_string(message.responseValue->statusCode),
+                            std::nullopt, std::nullopt});
   }
   packet.packet.layers.push_back(std::move(layer));
 }
@@ -267,29 +302,26 @@ void http_layer(ParsedPacket& packet, const Message& message) {
 
 void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                 const std::vector<ApplicationStream>& streams) {
-  struct Pending {
-    HttpExchange exchange;
-  };
   std::vector<Message> messages;
   std::map<std::size_t, ParsedPacket*> packetMap;
   for (auto& packet : packets)
     packetMap.emplace(packet.packet.number, &packet);
   for (const auto& stream : streams) {
-    if (!stream.fromClient && stream.bytes.empty())
-      continue;
     auto message = parse_message(stream, capture);
     if (!message) {
       if (!stream.ambiguous && !stream.truncated && recognized_prefix(stream.bytes))
-        add_diagnostic(capture, {"warning", "HTTP_MALFORMED", "Recognized HTTP prefix failed strict HTTP/1.x parsing",
+        add_diagnostic(capture, {"warning", "HTTP_MALFORMED",
+                                 "Recognized HTTP prefix failed strict HTTP/1.x parsing",
                                  stream.flowId, std::nullopt,
-                                 stream.packetNumbers.empty() ? std::nullopt
-                                                               : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
+                                 stream.packetNumbers.empty()
+                                     ? std::nullopt
+                                     : std::optional<std::size_t>{stream.packetNumbers.front()},
+                                 1U});
       continue;
     }
     for (const auto number : message->packetNumbers) {
       const auto found = packetMap.find(number);
-      if (found != packetMap.end())
-      if (number == message->completionPacket)
+      if (found != packetMap.end() && number == message->completionPacket)
         http_layer(*found->second, *message);
     }
     messages.push_back(std::move(*message));
@@ -313,8 +345,8 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                                          std::nullopt, std::nullopt, false});
       } else {
         pending.emplace(message.flowId,
-                        HttpExchange{"http-exchange-0", message.flowId, message.requestValue, std::nullopt,
-                                     std::nullopt, false});
+                        HttpExchange{"http-exchange-0", message.flowId, message.requestValue,
+                                     std::nullopt, std::nullopt, false});
       }
       continue;
     }
@@ -325,8 +357,10 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
       auto& request = pendingIt->second;
       request.response = message.responseValue;
       request.matched = true;
-      const auto requestPacket = request.request->packetNumbers.empty() ? 0U : request.request->packetNumbers.back();
-      const auto responsePacket = message.packetNumbers.empty() ? 0U : message.packetNumbers.front();
+      const auto requestPacket =
+          request.request->packetNumbers.empty() ? 0U : request.request->packetNumbers.back();
+      const auto responsePacket =
+          message.packetNumbers.empty() ? 0U : message.packetNumbers.front();
       const auto requestIt = std::find_if(packets.begin(), packets.end(), [&](const auto& packet) {
         return packet.packet.number == requestPacket;
       });
@@ -336,7 +370,8 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
       if (requestIt != packets.end() && responseIt != packets.end()) {
         const auto start = std::stoull(requestIt->packet.timestampNs);
         const auto end = std::stoull(responseIt->packet.timestampNs);
-        request.latencyNs = std::to_string(end >= start ? end - start : 0U);
+        if (end >= start)
+          request.latencyNs = std::to_string(end - start);
       }
       capture.httpExchanges.push_back(std::move(request));
       pending.erase(pendingIt);
