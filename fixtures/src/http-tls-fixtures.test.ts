@@ -75,6 +75,30 @@ describe('plaintext HTTP and TLS fixtures', () => {
     }
   });
 
+  it('records only safe application packet evidence in both new manifests', () => {
+    const manifest = (name: string) =>
+      JSON.parse(readFileSync(resolve(manifestRoot, `${name}.json`), 'utf8')) as {
+        expectedFacts: Record<string, unknown>;
+      };
+    expect(manifest('plaintext-http').expectedFacts).toEqual({
+      handshake: 'complete',
+      requestPacketNumbers: [4, 5],
+      responsePacketNumbers: [7],
+      matched: true,
+      queryValues: 'redacted',
+      redactedHeaders: ['authorization', 'cookie', 'x-api-key'],
+      body: 'not-retained',
+    });
+    expect(manifest('tls-handshake').expectedFacts).toEqual({
+      handshake: 'complete',
+      clientHelloPacketNumbers: [4],
+      serverHelloPacketNumbers: [5],
+      serverName: 'example.test',
+      offeredVersions: ['TLS 1.3', 'TLS 1.2'],
+      negotiatedVersion: 'TLS 1.3',
+    });
+  });
+
   it('does not copy HTTP secret sentinels into fixture metadata', () => {
     const metadataFiles = [
       ...readdirSync(manifestRoot).map((name) => resolve(manifestRoot, name)),

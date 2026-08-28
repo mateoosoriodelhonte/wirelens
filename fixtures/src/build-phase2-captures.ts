@@ -535,7 +535,7 @@ await writeFile(
 );
 await save('plaintext-http', buildPlaintextHttpPcap(), [1, 2, 3, 4, 5, 6, 7], {
   handshake: 'complete',
-  requestPacketNumbers: [4, 5, 6],
+  requestPacketNumbers: [4, 5],
   responsePacketNumbers: [7],
   matched: true,
   queryValues: 'redacted',
