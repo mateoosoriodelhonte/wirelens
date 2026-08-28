@@ -1,6 +1,6 @@
 {
   "capture": {
-    "capturedBytes": 388,
+    "capturedBytes": 827,
     "durationNs": "60000000",
     "endTimestampNs": "1060000000",
     "format": "pcap",
@@ -12,7 +12,7 @@
         "timestampResolution": "microseconds"
       }
     ],
-    "originalBytes": 388,
+    "originalBytes": 827,
     "packetCount": 7,
     "startTimestampNs": "1000000000",
     "timestampResolution": "microseconds"
@@ -31,12 +31,12 @@
       "address": "198.51.100.20",
       "addressFamily": "ipv4",
       "id": "endpoint-2",
-      "port": 443
+      "port": 80
     }
   ],
   "flows": [
     {
-      "capturedBytes": 388,
+      "capturedBytes": 827,
       "clientEndpointId": "endpoint-1",
       "endTimestampNs": "1060000000",
       "events": [
@@ -61,33 +61,108 @@
           "packetNumber": 5
         },
         {
-          "label": "FIN + ACK",
+          "label": "DATA",
           "packetNumber": 6
         },
         {
-          "label": "FIN + ACK",
+          "label": "DATA",
           "packetNumber": 7
         }
       ],
       "handshake": "complete",
       "id": "tcp-flow-1",
       "midStream": false,
-      "originalBytes": 388,
+      "originalBytes": 827,
       "packetNumbers": [1, 2, 3, 4, 5, 6, 7],
       "protocol": "TCP",
       "serverEndpointId": "endpoint-2",
       "startTimestampNs": "1000000000",
-      "termination": "graceful"
+      "termination": "open-at-capture-end"
     }
   ],
-  "httpExchanges": [],
+  "httpExchanges": [
+    {
+      "flowId": "tcp-flow-1",
+      "id": "http-exchange-1",
+      "latencyNs": "20000000",
+      "matched": true,
+      "request": {
+        "headers": [
+          {
+            "name": "host",
+            "redacted": false,
+            "value": "example.test"
+          },
+          {
+            "name": "authorization",
+            "redacted": true,
+            "value": null
+          },
+          {
+            "name": "cookie",
+            "redacted": true,
+            "value": null
+          },
+          {
+            "name": "x-api-key",
+            "redacted": true,
+            "value": null
+          },
+          {
+            "name": "content-type",
+            "redacted": false,
+            "value": "application/json"
+          },
+          {
+            "name": "content-length",
+            "redacted": false,
+            "value": "40"
+          }
+        ],
+        "line": "POST /search?term=[redacted]&sort=[redacted] HTTP/1.1",
+        "method": "POST",
+        "packetNumbers": [4, 5],
+        "target": "/search?term=[redacted]&sort=[redacted]",
+        "version": "HTTP/1.1"
+      },
+      "response": {
+        "headers": [
+          {
+            "name": "content-type",
+            "redacted": false,
+            "value": "application/json"
+          },
+          {
+            "name": "content-length",
+            "redacted": false,
+            "value": "11"
+          },
+          {
+            "name": "server",
+            "redacted": false,
+            "value": "wirelens-test"
+          },
+          {
+            "name": "date",
+            "redacted": false,
+            "value": "Thu, 01 Jan 1970 00:00:00 GMT"
+          }
+        ],
+        "line": "HTTP/1.1 200 OK",
+        "packetNumbers": [7],
+        "reason": "OK",
+        "statusCode": 200,
+        "version": "HTTP/1.1"
+      }
+    }
+  ],
   "observations": [
     {
       "id": "observation-1",
       "limitation": "Only packets in this capture were considered.",
-      "message": "TCP segment appears to resend bytes already seen.",
-      "packetNumbers": [4, 5],
-      "type": "tcp-retransmission-candidate"
+      "message": "TCP connection had no observed close before the capture ended.",
+      "packetNumbers": [1, 7],
+      "type": "tcp-connection-without-close"
     }
   ],
   "packets": [
@@ -249,7 +324,7 @@
               },
               "explanationKey": null,
               "name": "destinationPort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
@@ -460,7 +535,7 @@
               },
               "explanationKey": null,
               "name": "sourcePort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
@@ -691,7 +766,7 @@
               },
               "explanationKey": null,
               "name": "destinationPort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
@@ -756,7 +831,7 @@
     },
     {
       "analysisFlags": [],
-      "capturedLength": 59,
+      "capturedLength": 176,
       "destinationEndpointId": "endpoint-2",
       "flowId": "tcp-flow-1",
       "id": "packet-4",
@@ -765,7 +840,7 @@
         {
           "byteRange": {
             "captureOffset": 250,
-            "length": 59,
+            "length": 176,
             "packetOffset": 0
           },
           "explanationKey": null,
@@ -807,7 +882,7 @@
         {
           "byteRange": {
             "captureOffset": 264,
-            "length": 45,
+            "length": 162,
             "packetOffset": 14
           },
           "explanationKey": null,
@@ -840,7 +915,7 @@
               },
               "explanationKey": null,
               "name": "totalLength",
-              "value": "45"
+              "value": "162"
             },
             {
               "byteRange": {
@@ -912,7 +987,7 @@
               },
               "explanationKey": null,
               "name": "destinationPort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
@@ -970,14 +1045,14 @@
         }
       ],
       "number": 4,
-      "originalLength": 59,
+      "originalLength": 176,
       "sourceEndpointId": "endpoint-1",
       "summary": "TCP data",
       "timestampNs": "1030000000"
     },
     {
       "analysisFlags": [],
-      "capturedLength": 59,
+      "capturedLength": 199,
       "destinationEndpointId": "endpoint-2",
       "flowId": "tcp-flow-1",
       "id": "packet-5",
@@ -985,15 +1060,15 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 325,
-            "length": 59,
+            "captureOffset": 442,
+            "length": 199,
             "packetOffset": 0
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 325,
+                "captureOffset": 442,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -1003,7 +1078,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 331,
+                "captureOffset": 448,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -1013,7 +1088,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 337,
+                "captureOffset": 454,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -1027,15 +1102,15 @@
         },
         {
           "byteRange": {
-            "captureOffset": 339,
-            "length": 45,
+            "captureOffset": 456,
+            "length": 185,
             "packetOffset": 14
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 339,
+                "captureOffset": 456,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1045,7 +1120,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 339,
+                "captureOffset": 456,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1055,17 +1130,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 341,
+                "captureOffset": 458,
                 "length": 2,
                 "packetOffset": 16
               },
               "explanationKey": null,
               "name": "totalLength",
-              "value": "45"
+              "value": "185"
             },
             {
               "byteRange": {
-                "captureOffset": 347,
+                "captureOffset": 464,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -1075,7 +1150,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 348,
+                "captureOffset": 465,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -1085,7 +1160,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 351,
+                "captureOffset": 468,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -1095,7 +1170,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 355,
+                "captureOffset": 472,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -1109,7 +1184,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 359,
+            "captureOffset": 476,
             "length": 20,
             "packetOffset": 34
           },
@@ -1117,7 +1192,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 359,
+                "captureOffset": 476,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -1127,27 +1202,27 @@
             },
             {
               "byteRange": {
-                "captureOffset": 361,
+                "captureOffset": 478,
                 "length": 2,
                 "packetOffset": 36
               },
               "explanationKey": null,
               "name": "destinationPort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
-                "captureOffset": 363,
+                "captureOffset": 480,
                 "length": 4,
                 "packetOffset": 38
               },
               "explanationKey": null,
               "name": "sequenceNumber",
-              "value": "1001"
+              "value": "1123"
             },
             {
               "byteRange": {
-                "captureOffset": 367,
+                "captureOffset": 484,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -1157,7 +1232,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 371,
+                "captureOffset": 488,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -1167,7 +1242,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 371,
+                "captureOffset": 488,
                 "length": 2,
                 "packetOffset": 46
               },
@@ -1177,7 +1252,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 373,
+                "captureOffset": 490,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -1188,17 +1263,43 @@
           ],
           "label": "TCP",
           "protocol": "TCP"
+        },
+        {
+          "byteRange": null,
+          "explanationKey": "http",
+          "fields": [
+            {
+              "byteRange": null,
+              "explanationKey": null,
+              "name": "method",
+              "value": "POST"
+            },
+            {
+              "byteRange": null,
+              "explanationKey": null,
+              "name": "target",
+              "value": "/search?term=[redacted]&sort=[redacted]"
+            },
+            {
+              "byteRange": null,
+              "explanationKey": null,
+              "name": "version",
+              "value": "HTTP/1.1"
+            }
+          ],
+          "label": "HTTP request",
+          "protocol": "HTTP"
         }
       ],
       "number": 5,
-      "originalLength": 59,
+      "originalLength": 199,
       "sourceEndpointId": "endpoint-1",
       "summary": "TCP data",
       "timestampNs": "1040000000"
     },
     {
       "analysisFlags": [],
-      "capturedLength": 54,
+      "capturedLength": 94,
       "destinationEndpointId": "endpoint-2",
       "flowId": "tcp-flow-1",
       "id": "packet-6",
@@ -1206,15 +1307,15 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 400,
-            "length": 54,
+            "captureOffset": 657,
+            "length": 94,
             "packetOffset": 0
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 400,
+                "captureOffset": 657,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -1224,7 +1325,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 406,
+                "captureOffset": 663,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -1234,7 +1335,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 412,
+                "captureOffset": 669,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -1248,15 +1349,15 @@
         },
         {
           "byteRange": {
-            "captureOffset": 414,
-            "length": 40,
+            "captureOffset": 671,
+            "length": 80,
             "packetOffset": 14
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 414,
+                "captureOffset": 671,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1266,7 +1367,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 414,
+                "captureOffset": 671,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1276,17 +1377,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 416,
+                "captureOffset": 673,
                 "length": 2,
                 "packetOffset": 16
               },
               "explanationKey": null,
               "name": "totalLength",
-              "value": "40"
+              "value": "80"
             },
             {
               "byteRange": {
-                "captureOffset": 422,
+                "captureOffset": 679,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -1296,7 +1397,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 423,
+                "captureOffset": 680,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -1306,7 +1407,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 426,
+                "captureOffset": 683,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -1316,7 +1417,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 430,
+                "captureOffset": 687,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -1330,7 +1431,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 434,
+            "captureOffset": 691,
             "length": 20,
             "packetOffset": 34
           },
@@ -1338,7 +1439,7 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 434,
+                "captureOffset": 691,
                 "length": 2,
                 "packetOffset": 34
               },
@@ -1348,27 +1449,27 @@
             },
             {
               "byteRange": {
-                "captureOffset": 436,
+                "captureOffset": 693,
                 "length": 2,
                 "packetOffset": 36
               },
               "explanationKey": null,
               "name": "destinationPort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
-                "captureOffset": 438,
+                "captureOffset": 695,
                 "length": 4,
                 "packetOffset": 38
               },
               "explanationKey": null,
               "name": "sequenceNumber",
-              "value": "1006"
+              "value": "1268"
             },
             {
               "byteRange": {
-                "captureOffset": 442,
+                "captureOffset": 699,
                 "length": 4,
                 "packetOffset": 42
               },
@@ -1378,7 +1479,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 446,
+                "captureOffset": 703,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -1388,17 +1489,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 446,
+                "captureOffset": 703,
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.fin",
+              "explanationKey": "tcp.data",
               "name": "flags",
-              "value": "ACK, FIN"
+              "value": "ACK"
             },
             {
               "byteRange": {
-                "captureOffset": 448,
+                "captureOffset": 705,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -1412,14 +1513,14 @@
         }
       ],
       "number": 6,
-      "originalLength": 54,
+      "originalLength": 94,
       "sourceEndpointId": "endpoint-1",
-      "summary": "ACK, FIN",
+      "summary": "TCP data",
       "timestampNs": "1050000000"
     },
     {
       "analysisFlags": [],
-      "capturedLength": 54,
+      "capturedLength": 196,
       "destinationEndpointId": "endpoint-1",
       "flowId": "tcp-flow-1",
       "id": "packet-7",
@@ -1427,15 +1528,15 @@
       "layers": [
         {
           "byteRange": {
-            "captureOffset": 470,
-            "length": 54,
+            "captureOffset": 767,
+            "length": 196,
             "packetOffset": 0
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 470,
+                "captureOffset": 767,
                 "length": 6,
                 "packetOffset": 0
               },
@@ -1445,7 +1546,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 476,
+                "captureOffset": 773,
                 "length": 6,
                 "packetOffset": 6
               },
@@ -1455,7 +1556,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 482,
+                "captureOffset": 779,
                 "length": 2,
                 "packetOffset": 12
               },
@@ -1469,15 +1570,15 @@
         },
         {
           "byteRange": {
-            "captureOffset": 484,
-            "length": 40,
+            "captureOffset": 781,
+            "length": 182,
             "packetOffset": 14
           },
           "explanationKey": null,
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 484,
+                "captureOffset": 781,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1487,7 +1588,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 484,
+                "captureOffset": 781,
                 "length": 1,
                 "packetOffset": 14
               },
@@ -1497,17 +1598,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 486,
+                "captureOffset": 783,
                 "length": 2,
                 "packetOffset": 16
               },
               "explanationKey": null,
               "name": "totalLength",
-              "value": "40"
+              "value": "182"
             },
             {
               "byteRange": {
-                "captureOffset": 492,
+                "captureOffset": 789,
                 "length": 1,
                 "packetOffset": 22
               },
@@ -1517,7 +1618,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 493,
+                "captureOffset": 790,
                 "length": 1,
                 "packetOffset": 23
               },
@@ -1527,7 +1628,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 496,
+                "captureOffset": 793,
                 "length": 4,
                 "packetOffset": 26
               },
@@ -1537,7 +1638,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 500,
+                "captureOffset": 797,
                 "length": 4,
                 "packetOffset": 30
               },
@@ -1551,7 +1652,7 @@
         },
         {
           "byteRange": {
-            "captureOffset": 504,
+            "captureOffset": 801,
             "length": 20,
             "packetOffset": 34
           },
@@ -1559,17 +1660,17 @@
           "fields": [
             {
               "byteRange": {
-                "captureOffset": 504,
+                "captureOffset": 801,
                 "length": 2,
                 "packetOffset": 34
               },
               "explanationKey": null,
               "name": "sourcePort",
-              "value": "443"
+              "value": "80"
             },
             {
               "byteRange": {
-                "captureOffset": 506,
+                "captureOffset": 803,
                 "length": 2,
                 "packetOffset": 36
               },
@@ -1579,7 +1680,7 @@
             },
             {
               "byteRange": {
-                "captureOffset": 508,
+                "captureOffset": 805,
                 "length": 4,
                 "packetOffset": 38
               },
@@ -1589,17 +1690,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 512,
+                "captureOffset": 809,
                 "length": 4,
                 "packetOffset": 42
               },
               "explanationKey": null,
               "name": "acknowledgmentNumber",
-              "value": "1007"
+              "value": "1308"
             },
             {
               "byteRange": {
-                "captureOffset": 516,
+                "captureOffset": 813,
                 "length": 1,
                 "packetOffset": 46
               },
@@ -1609,17 +1710,17 @@
             },
             {
               "byteRange": {
-                "captureOffset": 516,
+                "captureOffset": 813,
                 "length": 2,
                 "packetOffset": 46
               },
-              "explanationKey": "tcp.fin",
+              "explanationKey": "tcp.data",
               "name": "flags",
-              "value": "ACK, FIN"
+              "value": "ACK"
             },
             {
               "byteRange": {
-                "captureOffset": 518,
+                "captureOffset": 815,
                 "length": 2,
                 "packetOffset": 48
               },
@@ -1630,12 +1731,32 @@
           ],
           "label": "TCP",
           "protocol": "TCP"
+        },
+        {
+          "byteRange": null,
+          "explanationKey": "http",
+          "fields": [
+            {
+              "byteRange": null,
+              "explanationKey": null,
+              "name": "version",
+              "value": "HTTP/1.1"
+            },
+            {
+              "byteRange": null,
+              "explanationKey": null,
+              "name": "statusCode",
+              "value": "200"
+            }
+          ],
+          "label": "HTTP response",
+          "protocol": "HTTP"
         }
       ],
       "number": 7,
-      "originalLength": 54,
+      "originalLength": 196,
       "sourceEndpointId": "endpoint-2",
-      "summary": "ACK, FIN",
+      "summary": "TCP data",
       "timestampNs": "1060000000"
     }
   ],

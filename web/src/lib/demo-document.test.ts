@@ -17,9 +17,11 @@ describe('demoDocument contract shape', () => {
       'dnsExchanges',
       'endpoints',
       'flows',
+      'httpExchanges',
       'observations',
       'packets',
       'schema',
+      'tlsHandshakes',
     ]);
     expect(keys(demoDocument.endpoints[0])).toEqual(['address', 'addressFamily', 'id', 'port']);
     expect(keys(demoDocument.packets[0])).toEqual([

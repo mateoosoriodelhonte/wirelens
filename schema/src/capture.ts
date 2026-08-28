@@ -25,6 +25,8 @@ export interface CaptureDocument {
   packets: Packet[];
   flows: Array<TcpFlow | UdpFlow>;
   dnsExchanges: DnsExchange[];
+  httpExchanges: HttpExchange[];
+  tlsHandshakes: TlsHandshake[];
   observations: Observation[];
   diagnostics: ParseDiagnostic[];
   [key: string]: unknown;
@@ -178,6 +180,73 @@ export interface DnsExchange {
   answers: DnsRecord[];
   latencyNs: DecimalString | null;
   matched: boolean;
+  [key: string]: unknown;
+}
+
+export type HttpAllowedHeaderName =
+  'host' | 'content-type' | 'content-length' | 'accept' | 'user-agent' | 'server' | 'date';
+
+export interface HttpHeader {
+  name: string;
+  value: string | null;
+  redacted: boolean;
+  [key: string]: unknown;
+}
+
+export interface HttpRequest {
+  line: string;
+  method: string;
+  target: string;
+  version: 'HTTP/1.0' | 'HTTP/1.1';
+  headers: HttpHeader[];
+  packetNumbers: number[];
+  [key: string]: unknown;
+}
+
+export interface HttpResponse {
+  line: string;
+  version: 'HTTP/1.0' | 'HTTP/1.1';
+  statusCode: number;
+  reason: string;
+  headers: HttpHeader[];
+  packetNumbers: number[];
+  [key: string]: unknown;
+}
+
+export interface HttpExchange {
+  id: string;
+  flowId: string;
+  request: HttpRequest | null;
+  response: HttpResponse | null;
+  latencyNs: DecimalString | null;
+  matched: boolean;
+  [key: string]: unknown;
+}
+
+export interface TlsClientHello {
+  recordVersion: string;
+  legacyVersion: string;
+  offeredVersions: string[];
+  serverName: string | null;
+  packetNumbers: number[];
+  [key: string]: unknown;
+}
+
+export interface TlsServerHello {
+  recordVersion: string;
+  legacyVersion: string;
+  negotiatedVersion: string | null;
+  packetNumbers: number[];
+  [key: string]: unknown;
+}
+
+export interface TlsHandshake {
+  id: string;
+  flowId: string;
+  clientHello: TlsClientHello | null;
+  serverHello: TlsServerHello | null;
+  matched: boolean;
+  limitation: string;
   [key: string]: unknown;
 }
 

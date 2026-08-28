@@ -5,10 +5,12 @@
   import CapturePicker from '$lib/components/CapturePicker.svelte';
   import ConversationList from '$lib/components/ConversationList.svelte';
   import DnsExchangeList from '$lib/components/DnsExchangeList.svelte';
+  import HttpExchangeList from '$lib/components/HttpExchangeList.svelte';
   import ObservationList from '$lib/components/ObservationList.svelte';
   import PacketDetails from '$lib/components/PacketDetails.svelte';
   import PacketTable from '$lib/components/PacketTable.svelte';
   import TcpSequence from '$lib/components/TcpSequence.svelte';
+  import TlsHandshakeList from '$lib/components/TlsHandshakeList.svelte';
   import { createCaptureStore, type CaptureState, type CaptureStore } from '$lib/capture-store';
   import { ParserClient } from '$lib/worker/parser-client';
   import type { CaptureDocument } from '$lib/model';
@@ -19,6 +21,16 @@
   let learningMode = $state(true);
   let isBrowser = $state(false);
   let focusedFileName = $state<string | null>(null);
+  let activeSection = $state('overview');
+  const sections = [
+    ['overview', 'Overview'],
+    ['conversations', 'Conversations'],
+    ['dns', 'DNS'],
+    ['http', 'HTTP'],
+    ['tls', 'TLS'],
+    ['observations', 'Observations'],
+    ['packets', 'Packets'],
+  ] as const;
   const document = $derived<CaptureDocument | null>(
     captureState.status === 'ready' ? captureState.document : null,
   );
@@ -47,6 +59,12 @@
 
   onMount(() => {
     isBrowser = true;
+    const setSectionFromHash = () => {
+      const hashSection = globalThis.location.hash.slice(1);
+      if (sections.some(([id]) => id === hashSection)) activeSection = hashSection;
+    };
+    setSectionFromHash();
+    globalThis.addEventListener('hashchange', setSectionFromHash);
     const parser = new ParserClient();
     captureStore = createCaptureStore(parser);
     let lastReadyDocument: CaptureDocument | null = null;
@@ -60,10 +78,29 @@
       }
     });
     return () => {
+      globalThis.removeEventListener('hashchange', setSectionFromHash);
       unsubscribe();
       void captureStore?.dispose();
       captureStore = null;
     };
+  });
+
+  $effect(() => {
+    if (!isBrowser || !document || !('IntersectionObserver' in globalThis)) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) activeSection = visible.target.id;
+      },
+      { rootMargin: '-15% 0px -65% 0px', threshold: [0, 0.25, 0.5, 1] },
+    );
+    for (const [id] of sections) {
+      const section = globalThis.document.getElementById(id);
+      if (section) observer.observe(section);
+    }
+    return () => observer.disconnect();
   });
 
   $effect(() => {
@@ -146,10 +183,15 @@
   {/if}
   {#if document}
     <nav class="section-nav" aria-label="Capture sections">
-      <span>Jump to</span><a href={resolve('/#overview')}>Overview</a><a
-        href={resolve('/#conversations')}>Conversations</a
-      ><a href={resolve('/#dns')}>DNS</a><a href={resolve('/#observations')}>Observations</a>
-      <a href={resolve('/#packets')}>Packets</a>
+      <span>Jump to</span>
+      {#each sections as [id, label] (id)}
+        <a
+          class:active={activeSection === id}
+          href={resolve(`/#${id}`)}
+          aria-current={activeSection === id ? 'location' : undefined}
+          onclick={() => (activeSection = id)}>{label}</a
+        >
+      {/each}
     </nav>
   {/if}
   {#if document}
@@ -175,6 +217,8 @@
         observations={dnsObservations}
         onSelectPacket={selectEvidencePacket}
       />
+      <HttpExchangeList exchanges={document.httpExchanges} onSelectPacket={selectEvidencePacket} />
+      <TlsHandshakeList handshakes={document.tlsHandshakes} onSelectPacket={selectEvidencePacket} />
       <ObservationList observations={otherObservations} onSelectPacket={selectEvidencePacket} />
       <div class="split packet-split">
         <PacketTable
@@ -331,6 +375,11 @@
   }
   .section-nav a:hover {
     text-decoration: underline;
+  }
+  .section-nav a.active {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
   }
   .section-stack {
     display: grid;

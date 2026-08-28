@@ -50,6 +50,43 @@ json record_json(const DnsRecord& value) {
           {"value", value.value}};
 }
 
+json http_header_json(const HttpHeader& value) {
+  return {{"name", value.name}, {"value", value.value}, {"redacted", value.redacted}};
+}
+
+json http_request_json(const HttpRequest& value) {
+  json result{{"line", value.line},       {"method", value.method},
+              {"target", value.target},   {"version", value.version},
+              {"headers", json::array()}, {"packetNumbers", value.packetNumbers}};
+  for (const auto& header : value.headers)
+    result["headers"].push_back(http_header_json(header));
+  return result;
+}
+
+json http_response_json(const HttpResponse& value) {
+  json result{
+      {"line", value.line},     {"version", value.version}, {"statusCode", value.statusCode},
+      {"reason", value.reason}, {"headers", json::array()}, {"packetNumbers", value.packetNumbers}};
+  for (const auto& header : value.headers)
+    result["headers"].push_back(http_header_json(header));
+  return result;
+}
+
+json tls_client_hello_json(const TlsClientHello& value) {
+  return {{"recordVersion", value.recordVersion},
+          {"legacyVersion", value.legacyVersion},
+          {"offeredVersions", value.offeredVersions},
+          {"serverName", value.serverName},
+          {"packetNumbers", value.packetNumbers}};
+}
+
+json tls_server_hello_json(const TlsServerHello& value) {
+  return {{"recordVersion", value.recordVersion},
+          {"legacyVersion", value.legacyVersion},
+          {"negotiatedVersion", value.negotiatedVersion},
+          {"packetNumbers", value.packetNumbers}};
+}
+
 const char* handshake_text(const HandshakeState state) {
   switch (state) {
   case HandshakeState::complete:
@@ -140,6 +177,28 @@ std::string serialize_capture(const CaptureDocument& capture) {
     for (const auto& answer : exchange.answers)
       item["answers"].push_back(record_json(answer));
     result["dnsExchanges"].push_back(std::move(item));
+  }
+  result["httpExchanges"] = json::array();
+  for (const auto& exchange : capture.httpExchanges) {
+    json item{
+        {"id", exchange.id},   {"flowId", exchange.flowId},       {"request", nullptr},
+        {"response", nullptr}, {"latencyNs", exchange.latencyNs}, {"matched", exchange.matched}};
+    if (exchange.request)
+      item["request"] = http_request_json(*exchange.request);
+    if (exchange.response)
+      item["response"] = http_response_json(*exchange.response);
+    result["httpExchanges"].push_back(std::move(item));
+  }
+  result["tlsHandshakes"] = json::array();
+  for (const auto& handshake : capture.tlsHandshakes) {
+    json item{{"id", handshake.id},           {"flowId", handshake.flowId},
+              {"clientHello", nullptr},       {"serverHello", nullptr},
+              {"matched", handshake.matched}, {"limitation", handshake.limitation}};
+    if (handshake.clientHello)
+      item["clientHello"] = tls_client_hello_json(*handshake.clientHello);
+    if (handshake.serverHello)
+      item["serverHello"] = tls_server_hello_json(*handshake.serverHello);
+    result["tlsHandshakes"].push_back(std::move(item));
   }
   result["observations"] = json::array();
   for (const auto& observation : capture.observations)

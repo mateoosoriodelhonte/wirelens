@@ -7,6 +7,7 @@ add_executable(wirelens_tests
   flow_builder_test.cpp
   observation_builder_test.cpp
   tcp_lifecycle_test.cpp
+  http_tls_test.cpp
   serialization_test.cpp)
 target_link_libraries(wirelens_tests PRIVATE wirelens_core Catch2::Catch2WithMain)
 target_include_directories(wirelens_tests PRIVATE ${PROJECT_SOURCE_DIR}/core/src)

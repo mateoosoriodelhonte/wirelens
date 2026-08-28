@@ -146,6 +146,7 @@ ParseResult parse_capture(const std::span<const std::byte> bytes) {
   }
   internal::build_flows(capture, parsed);
   internal::build_dns(capture, parsed);
+  internal::build_applications(capture, parsed);
   capture.packets.reserve(parsed.size());
   for (auto& packet : parsed)
     capture.packets.push_back(std::move(packet.packet));

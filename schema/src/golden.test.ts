@@ -77,9 +77,78 @@ describe('reviewed handshake golden document', () => {
 
   it('contains no sensitive or raw payload object keys', () => {
     const forbidden = /raw|payload|authorization|cookie|token|secret/i;
-    for (const name of ['tcp-handshake', 'tcp-reset', 'tcp-retransmission']) {
+    for (const name of [
+      'tcp-handshake',
+      'tcp-reset',
+      'tcp-retransmission',
+      'plaintext-http',
+      'tls-handshake',
+    ]) {
       expect(objectKeys(readFixtureGolden(name)).filter((key) => forbidden.test(key))).toEqual([]);
     }
+  });
+
+  it('validates sanitized HTTP exchange facts and excludes secret and body evidence', () => {
+    const document = readFixtureGolden('plaintext-http');
+    expect(document.httpExchanges).toEqual([
+      expect.objectContaining({
+        flowId: 'tcp-flow-1',
+        matched: true,
+        latencyNs: '20000000',
+        request: expect.objectContaining({
+          line: 'POST /search?term=[redacted]&sort=[redacted] HTTP/1.1',
+          target: '/search?term=[redacted]&sort=[redacted]',
+          packetNumbers: [4, 5],
+          headers: expect.arrayContaining([
+            { name: 'authorization', value: null, redacted: true },
+            { name: 'cookie', value: null, redacted: true },
+            { name: 'x-api-key', value: null, redacted: true },
+          ]),
+        }),
+        response: expect.objectContaining({
+          line: 'HTTP/1.1 200 OK',
+          packetNumbers: [7],
+        }),
+      }),
+    ]);
+    expect(
+      document.packets
+        .filter((packet) => packet.layers.some((layer) => layer.protocol === 'HTTP'))
+        .map((packet) => packet.number),
+    ).toEqual([5, 7]);
+    const serialized = JSON.stringify(document);
+    expect(serialized).not.toContain('wirelens-http-header-secret-29');
+    expect(serialized).not.toContain('wirelens-http-body-secret-29');
+    expect(document.httpExchanges[0].request?.packetNumbers).not.toContain(6);
+  });
+
+  it('validates bounded matched TLS hello facts and packet evidence', () => {
+    const document = readFixtureGolden('tls-handshake');
+    expect(document.tlsHandshakes).toEqual([
+      expect.objectContaining({
+        flowId: 'tcp-flow-1',
+        matched: true,
+        limitation: 'WireLens does not decrypt TLS application data.',
+        clientHello: expect.objectContaining({
+          recordVersion: 'TLS 1.0',
+          legacyVersion: 'TLS 1.2',
+          offeredVersions: ['TLS 1.3', 'TLS 1.2'],
+          serverName: 'example.test',
+          packetNumbers: [4],
+        }),
+        serverHello: expect.objectContaining({
+          recordVersion: 'TLS 1.2',
+          legacyVersion: 'TLS 1.2',
+          negotiatedVersion: 'TLS 1.3',
+          packetNumbers: [5],
+        }),
+      }),
+    ]);
+    expect(
+      document.packets
+        .filter((packet) => packet.layers.some((layer) => layer.protocol === 'TLS'))
+        .map((packet) => packet.number),
+    ).toEqual([4, 5]);
   });
 
   it('validates reviewed TCP reset and retransmission evidence', () => {

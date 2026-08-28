@@ -181,6 +181,7 @@
       "startTimestampNs": "1000000000"
     }
   ],
+  "httpExchanges": [],
   "observations": [
     {
       "id": "observation-1",
@@ -4028,5 +4029,6 @@
       "timestampNs": "7070000000"
     }
   ],
-  "schema": "wirelens.capture"
+  "schema": "wirelens.capture",
+  "tlsHandshakes": []
 }

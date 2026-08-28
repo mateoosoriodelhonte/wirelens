@@ -8,6 +8,28 @@ TEST_CASE("serialization emits a stable sanitized capture document") {
   const auto result = wirelens::parse_capture(wirelens_test::build_handshake());
   REQUIRE(std::holds_alternative<wirelens::CaptureDocument>(result));
   auto capture = std::get<wirelens::CaptureDocument>(result);
+  capture.httpExchanges.push_back(
+      {"http-exchange-1",
+       "tcp-flow-1",
+       {wirelens::HttpRequest{
+           "GET /search?q=[redacted] HTTP/1.1",
+           "GET",
+           "/search?q=[redacted]",
+           "HTTP/1.1",
+           {{"host", "example.test", false}, {"authorization", std::nullopt, true}},
+           {4}}},
+       {wirelens::HttpResponse{
+           "HTTP/1.1 200 OK", "HTTP/1.1", 200, "OK", {{"content-length", "19", false}}, {5}}},
+       "25000000",
+       true});
+  capture.tlsHandshakes.push_back(
+      {"tls-handshake-1",
+       "tcp-flow-1",
+       {wirelens::TlsClientHello{
+           "TLS 1.0", "TLS 1.2", {"TLS 1.3", "TLS 1.2"}, "example.test", {6}}},
+       {wirelens::TlsServerHello{"TLS 1.2", "TLS 1.2", "TLS 1.3", {7}}},
+       true,
+       "WireLens does not decrypt TLS application data."});
   capture.diagnostics.push_back({"warning", "TEST", "message", "packet", 74, 1, std::nullopt});
   const auto json = wirelens::serialize_capture(capture);
   REQUIRE(json.find("\"schema\": \"wirelens.capture\"") != std::string::npos);
@@ -22,4 +44,11 @@ TEST_CASE("serialization emits a stable sanitized capture document") {
   REQUIRE(json.find("\"context\": \"packet\"") != std::string::npos);
   REQUIRE(json.find("\"packetNumber\": 1") != std::string::npos);
   REQUIRE(json.find("\"count\": null") != std::string::npos);
+  REQUIRE(json.find("GET /search?q=[redacted] HTTP/1.1") != std::string::npos);
+  REQUIRE(json.find("Bearer must-not-survive") == std::string::npos);
+  REQUIRE(json.find("\"authorization\"") != std::string::npos);
+  REQUIRE(json.find("\"value\": null") != std::string::npos);
+  REQUIRE(json.find("\"offeredVersions\"") != std::string::npos);
+  REQUIRE(json.find("\"serverName\": \"example.test\"") != std::string::npos);
+  REQUIRE(json.find("rawExtensions") == std::string::npos);
 }

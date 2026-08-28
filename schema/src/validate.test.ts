@@ -20,6 +20,8 @@ describe('validateCaptureDocument', () => {
     packets: [],
     flows: [],
     dnsExchanges: [],
+    httpExchanges: [],
+    tlsHandshakes: [],
     observations: [],
     diagnostics: [],
   });
@@ -87,6 +89,137 @@ describe('validateCaptureDocument', () => {
         message: 'DNS response latency met the slow-response rule',
         packetNumbers: [1, 2],
         limitation: 'Only packets in this capture were considered.',
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+  });
+
+  it('accepts privacy-safe HTTP exchanges and rejects retained redacted values', () => {
+    const value = minimal() as Record<string, any>;
+    value.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: {
+          line: 'GET /search?q=[redacted] HTTP/1.1',
+          method: 'GET',
+          target: '/search?q=[redacted]',
+          version: 'HTTP/1.1',
+          headers: [
+            { name: 'host', value: 'example.test', redacted: false },
+            { name: 'authorization', value: null, redacted: true },
+          ],
+          packetNumbers: [4, 5],
+        },
+        response: {
+          line: 'HTTP/1.1 200 OK',
+          version: 'HTTP/1.1',
+          statusCode: 200,
+          reason: 'OK',
+          headers: [{ name: 'content-length', value: '19', redacted: false }],
+          packetNumbers: [6],
+        },
+        latencyNs: '25000000',
+        matched: true,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+
+    value.httpExchanges[0].request.headers[1].value = 'Bearer must-not-survive';
+    expect(() => validateCaptureDocument(value)).toThrow(/value|redacted/);
+  });
+
+  it('accepts the HTTP status boundary and rejects the next value', () => {
+    const value = minimal() as Record<string, any>;
+    value.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: null,
+        response: {
+          line: 'HTTP/1.1 599 Boundary',
+          version: 'HTTP/1.1',
+          statusCode: 599,
+          reason: 'Boundary',
+          headers: [],
+          packetNumbers: [1],
+        },
+        latencyNs: null,
+        matched: false,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+
+    value.httpExchanges[0].response.statusCode = 600;
+    expect(() => validateCaptureDocument(value)).toThrow(/statusCode|599/);
+  });
+
+  it('accepts bounded TLS hello metadata and rejects raw extension fields', () => {
+    const value = minimal() as Record<string, any>;
+    value.tlsHandshakes = [
+      {
+        id: 'tls-handshake-1',
+        flowId: 'tcp-flow-1',
+        clientHello: {
+          recordVersion: 'TLS 1.0',
+          legacyVersion: 'TLS 1.2',
+          offeredVersions: ['TLS 1.3', 'TLS 1.2'],
+          serverName: 'example.test',
+          packetNumbers: [4],
+        },
+        serverHello: {
+          recordVersion: 'TLS 1.2',
+          legacyVersion: 'TLS 1.2',
+          negotiatedVersion: 'TLS 1.3',
+          packetNumbers: [5],
+        },
+        matched: true,
+        limitation: 'WireLens does not decrypt TLS application data.',
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+
+    value.tlsHandshakes[0].clientHello.rawExtensions = 'must-not-enter-the-contract';
+    expect(() => validateCaptureDocument(value)).toThrow(/property name|rawExtensions/);
+  });
+
+  it('permits unknown optional fields inside HTTP and TLS entities', () => {
+    const value = minimal() as Record<string, any>;
+    value.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: {
+          line: 'GET / HTTP/1.1',
+          method: 'GET',
+          target: '/',
+          version: 'HTTP/1.1',
+          headers: [{ name: 'host', value: 'example.test', redacted: false, futureHeader: true }],
+          packetNumbers: [1],
+          futureRequest: true,
+        },
+        response: null,
+        latencyNs: null,
+        matched: false,
+        futureExchange: true,
+      },
+    ];
+    value.tlsHandshakes = [
+      {
+        id: 'tls-handshake-1',
+        flowId: 'tcp-flow-1',
+        clientHello: {
+          recordVersion: 'TLS 1.2',
+          legacyVersion: 'TLS 1.2',
+          offeredVersions: ['TLS 1.3'],
+          serverName: null,
+          packetNumbers: [2],
+          futureHello: true,
+        },
+        serverHello: null,
+        matched: false,
+        limitation: 'WireLens does not decrypt TLS application data.',
+        futureHandshake: true,
       },
     ];
     expect(validateCaptureDocument(value)).toEqual(value);

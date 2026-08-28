@@ -259,6 +259,7 @@ ParseResult parse_pcapng(const std::span<const std::byte> bytes) {
   }
   internal::build_flows(capture, parsed);
   internal::build_dns(capture, parsed);
+  internal::build_applications(capture, parsed);
   for (const auto& [blockType, count] : unknownBlocks) {
     internal::add_diagnostic(capture,
                              {"warning", "UNKNOWN_PCAPNG_BLOCK",

@@ -56,6 +56,26 @@ struct ParsedPacket {
   ByteRange sourceRange;
 };
 
+struct ApplicationStream {
+  std::string flowId;
+  bool fromClient = false;
+  std::vector<std::byte> bytes;
+  std::vector<std::size_t> bytePacketNumbers;
+  std::vector<std::size_t> packetNumbers;
+  bool complete = false;
+  bool gap = false;
+  bool ambiguous = false;
+  bool truncated = false;
+  bool limited = false;
+};
+
+std::vector<ApplicationStream> reconstruct_tcp_prefixes(CaptureDocument& capture,
+                                                         const std::vector<ParsedPacket>& packets);
+void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
+                const std::vector<ApplicationStream>& streams);
+void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
+               const std::vector<ApplicationStream>& streams);
+
 std::optional<ProtocolLayer> decode_tcp(std::span<const std::byte> payload,
                                         std::size_t captureOffset, std::size_t packetOffset,
                                         bool payloadComplete, TcpFacts& facts);
@@ -78,6 +98,7 @@ std::optional<Diagnostic> decode_ethernet(std::span<const std::byte> frame,
                                           UdpFacts& udp, DnsFacts& dns);
 void build_flows(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 void build_dns(CaptureDocument& capture, const std::vector<ParsedPacket>& packets);
+void build_applications(CaptureDocument& capture, std::vector<ParsedPacket>& packets);
 void add_observation(CaptureDocument& capture, std::string type, std::string message,
                      std::vector<std::size_t> packetNumbers);
 void add_diagnostic(CaptureDocument& capture, Diagnostic diagnostic);

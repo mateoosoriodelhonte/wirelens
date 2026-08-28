@@ -11,6 +11,9 @@ add_library(wirelens_core
   src/observation_builder.cpp
   src/tcp_parser.cpp
   src/flow_builder.cpp
+  src/tcp_reassembly.cpp
+  src/http_parser.cpp
+  src/tls_parser.cpp
   src/serialize.cpp)
 wirelens_require_json()
 target_include_directories(wirelens_core PUBLIC include)
