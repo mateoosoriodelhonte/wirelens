@@ -293,8 +293,8 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
           return std::nullopt;
         result.requestValue = HttpRequest{
             sanitizedLine, method, target, version, std::move(headers), result.packetNumbers};
-        if (framing.valid && !framing.transferEncoded) {
-          const auto bodyLength = framing.contentLength.value_or(0U);
+        if (framing.valid && !framing.transferEncoded && framing.contentLength.has_value()) {
+          const auto bodyLength = *framing.contentLength;
           if (bodyLength <= stream.bytes.size() - headerEnd)
             result.next = headerEnd + bodyLength;
         }

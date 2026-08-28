@@ -330,6 +330,18 @@ TEST_CASE("HTTP stops parsing after a switching-protocols response") {
   REQUIRE(capture.httpExchanges.front().response->statusCode == 101U);
 }
 
+TEST_CASE("HTTP does not parse request-body bytes without explicit framing") {
+  const std::string bodySentinel = "BODY_SECRET_SENTINEL";
+  const auto capture = parse_http_stream(
+      wirelens_test::byte_payload(
+          "POST /upload HTTP/1.1\r\nHost: example.test\r\n\r\nGET /" + bodySentinel +
+          " HTTP/1.1\r\nHost: example.test\r\n\r\n"),
+      true);
+  REQUIRE(capture.httpExchanges.size() == 1U);
+  REQUIRE(capture.httpExchanges.front().request->target == "/upload");
+  REQUIRE(wirelens::serialize_capture(capture).find(bodySentinel) == std::string::npos);
+}
+
 TEST_CASE("HTTP does not parse header-like bytes from an unframed response body") {
   const auto capture = parse_http_stream(
       wirelens_test::byte_payload(
@@ -340,7 +352,7 @@ TEST_CASE("HTTP does not parse header-like bytes from an unframed response body"
 }
 
 TEST_CASE("HTTP exchange count accepts the exact cap and rejects one more") {
-  const auto request = std::string{"GET / HTTP/1.1\r\n\r\n"};
+  const auto request = std::string{"GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n"};
   auto parseCount = [&](const std::size_t count) {
     wirelens::internal::ApplicationStream stream;
     stream.flowId = "tcp-flow-1";
