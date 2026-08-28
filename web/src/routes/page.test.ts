@@ -58,12 +58,65 @@ describe('capture page', () => {
     expect(screen.getByText('3 packets')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /conversations/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /dns exchanges/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /http exchanges/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /tls handshakes/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Observations' })).toBeInTheDocument();
     expect(screen.getByText('SYN + ACK')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ethernet/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ipv4/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /tcp/i })).toBeInTheDocument();
     expect(screen.getByRole('main')).not.toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('renders HTTP and TLS metadata and follows their packet evidence', async () => {
+    const applicationDocument = {
+      ...demoDocument,
+      httpExchanges: [
+        {
+          id: 'http-exchange-1',
+          flowId: 'tcp-flow-1',
+          request: {
+            line: 'GET / HTTP/1.1',
+            method: 'GET',
+            target: '/',
+            version: 'HTTP/1.1' as const,
+            headers: [{ name: 'host', value: 'example.test', redacted: false }],
+            packetNumbers: [1],
+          },
+          response: null,
+          latencyNs: null,
+          matched: false,
+        },
+      ],
+      tlsHandshakes: [
+        {
+          id: 'tls-handshake-1',
+          flowId: 'tcp-flow-1',
+          clientHello: {
+            recordVersion: 'TLS 1.0',
+            legacyVersion: 'TLS 1.2',
+            offeredVersions: ['TLS 1.3'],
+            serverName: null,
+            packetNumbers: [2],
+          },
+          serverHello: null,
+          matched: false,
+          limitation: 'WireLens does not decrypt TLS application data.',
+        },
+      ],
+    };
+    render(Page);
+    instances[0].parse.mockResolvedValue(applicationDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('application.pcap')] },
+    });
+    expect(await screen.findByText('GET / HTTP/1.1')).toBeVisible();
+    expect(screen.getByText('WireLens does not decrypt TLS application data.')).toBeVisible();
+    await fireEvent.click(screen.getByRole('button', { name: 'View TLS ClientHello packet 2' }));
+    expect(screen.getByRole('heading', { name: 'Packet details' })).toHaveFocus();
+    expect(
+      screen.getByRole('heading', { name: 'Packet details' }).closest('section'),
+    ).toHaveTextContent('Packet 2');
   });
 
   it('follows DNS evidence to the selected packet details', async () => {

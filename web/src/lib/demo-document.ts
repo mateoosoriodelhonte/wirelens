@@ -149,6 +149,8 @@ export const demoDocument: CaptureDocument = {
     },
   ],
   dnsExchanges: [],
+  httpExchanges: [],
+  tlsHandshakes: [],
   observations: [],
   diagnostics: [],
 };
