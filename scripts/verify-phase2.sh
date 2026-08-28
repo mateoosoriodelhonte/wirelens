@@ -8,9 +8,10 @@ tool_dir=${WIRELENS_TOOL_DIR:-"$repo_root/.tools"}
 cmake="$tool_dir/venv/bin/cmake"
 ninja="$tool_dir/venv/bin/ninja"
 ctest="$tool_dir/venv/bin/ctest"
+clang_format="$tool_dir/venv/bin/clang-format"
 
-if [[ ! -x "$cmake" || ! -x "$ninja" || ! -x "$ctest" ]]; then
-  printf 'Phase 2 verification: FAIL (local CMake/Ninja missing; run scripts/bootstrap-local-toolchain.sh)\n' >&2
+if [[ ! -x "$cmake" || ! -x "$ninja" || ! -x "$ctest" || ! -x "$clang_format" ]]; then
+  printf 'Phase 2 verification: FAIL (local CMake/Ninja/clang-format missing; run scripts/bootstrap-local-toolchain.sh)\n' >&2
   exit 1
 fi
 if ! command -v rg >/dev/null 2>&1; then
@@ -25,6 +26,10 @@ run_step() {
   shift
   printf '\n== %s ==\n' "$name"
   "$@"
+}
+
+check_cpp_format() {
+  git ls-files -z '*.cpp' '*.hpp' '*.h' | xargs -0 "$clang_format" --dry-run --Werror
 }
 
 run_step 'Check Phase 2 gate contract' bash scripts/tests/verify-phase2.test.sh
@@ -66,6 +71,7 @@ run_step 'Run package tests' pnpm test
 run_step 'TypeScript and project checks' pnpm check
 run_step 'Lint' pnpm lint
 run_step 'Formatting' pnpm format:check
+run_step 'C++ formatting' check_cpp_format
 run_step 'Build static web output' pnpm --dir web build
 
 playwright_bin="$repo_root/web/node_modules/.bin/playwright"
@@ -76,6 +82,7 @@ fi
 run_step 'Chromium Playwright' pnpm test:e2e --project=chromium
 run_step 'Firefox Playwright' pnpm test:e2e --project=firefox
 
+run_step 'Check privacy scan rules' bash scripts/tests/check-privacy.test.sh
 run_step 'Privacy scan' bash scripts/check-privacy.sh
 run_step 'Secret scan' bash scripts/check-secrets.sh
 run_step 'Dependency audit (high severity)' pnpm audit --audit-level high

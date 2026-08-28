@@ -32,7 +32,7 @@ adds optional data. A major version removes data or changes its meaning.
 ## Privacy rules
 
 The normalized document does not contain raw packet payloads. HTTP metadata is
-limited to an allowlist. Query text and secret-bearing header values are
+limited to an allowlist. Query values and secret-bearing header values are
 redacted before they can reach a layer, summary, diagnostic, search index,
 golden file, or export. HTTP bodies and TLS key material are not retained.
 Hostnames, IP addresses, ports, and sanitized paths can still identify a

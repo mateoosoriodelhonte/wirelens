@@ -70,7 +70,7 @@ struct ApplicationStream {
 };
 
 std::vector<ApplicationStream> reconstruct_tcp_prefixes(CaptureDocument& capture,
-                                                         const std::vector<ParsedPacket>& packets);
+                                                        const std::vector<ParsedPacket>& packets);
 void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                 const std::vector<ApplicationStream>& streams);
 void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,

@@ -31,9 +31,11 @@ for step in \
   'TypeScript and project checks' \
   'Lint' \
   'Formatting' \
+  'C++ formatting' \
   'Build static web output' \
   'Chromium Playwright' \
   'Firefox Playwright' \
+  'Check privacy scan rules' \
   'Privacy scan' \
   'Secret scan' \
   'Dependency audit (high severity)'; do
@@ -59,9 +61,11 @@ for command in \
   'pnpm check' \
   'pnpm lint' \
   'pnpm format:check' \
+  'check_cpp_format' \
   'pnpm --dir web build' \
   'pnpm test:e2e --project=chromium' \
   'pnpm test:e2e --project=firefox' \
+  'bash scripts/tests/check-privacy.test.sh' \
   'bash scripts/check-privacy.sh' \
   'bash scripts/check-secrets.sh' \
   'pnpm audit --audit-level high'; do

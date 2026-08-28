@@ -27,7 +27,9 @@ struct Options {
   std::size_t warmup = 2;
 };
 
-void usage() { std::cerr << "Usage: wirelens_benchmark_native --capture PATH [--runs N] [--warmup N]\n"; }
+void usage() {
+  std::cerr << "Usage: wirelens_benchmark_native --capture PATH [--runs N] [--warmup N]\n";
+}
 
 bool parse_count(const char* value, std::size_t& result, const bool allowZero = false) {
   try {
@@ -81,7 +83,7 @@ double elapsed_ms(const Clock::time_point start, const Clock::time_point end) {
 
 std::uint64_t peak_memory_bytes() {
 #if defined(WIRELENS_HAS_RUSAGE)
-  struct rusage usage {};
+  struct rusage usage{};
   if (getrusage(RUSAGE_SELF, &usage) != 0)
     return 0;
 #if defined(__APPLE__)
@@ -134,14 +136,10 @@ int run(const Options& options) {
 #endif
   }
 
-  Json output{{"runner", "native"},
-              {"bytes", bytes.size()},
-              {"packetCount", packet_count},
-              {"jsonBytes", json_bytes},
-              {"parseMs", parse_ms},
-              {"jsonSerializationMs", serialization_ms},
-              {"peakMemoryBytes", memory},
-              {"peakMemorySupported", !memory.empty()}};
+  Json output{{"runner", "native"},          {"bytes", bytes.size()},
+              {"packetCount", packet_count}, {"jsonBytes", json_bytes},
+              {"parseMs", parse_ms},         {"jsonSerializationMs", serialization_ms},
+              {"peakMemoryBytes", memory},   {"peakMemorySupported", !memory.empty()}};
   std::cout << output.dump() << '\n';
   return 0;
 }

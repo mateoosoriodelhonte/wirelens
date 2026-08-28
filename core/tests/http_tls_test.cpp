@@ -303,8 +303,7 @@ TEST_CASE("HTTP parses multiple safely framed exchanges on one persistent flow")
 }
 
 TEST_CASE("HTTP keeps a request pending across informational responses") {
-  const auto request =
-      wirelens_test::byte_payload("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n");
+  const auto request = wirelens_test::byte_payload("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n");
   const auto responses = wirelens_test::byte_payload(
       "HTTP/1.1 100 Continue\r\n\r\n"
       "HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload\r\n\r\n"
@@ -333,9 +332,8 @@ TEST_CASE("HTTP stops parsing after a switching-protocols response") {
 TEST_CASE("HTTP does not parse request-body bytes without explicit framing") {
   const std::string bodySentinel = "BODY_SECRET_SENTINEL";
   const auto capture = parse_http_stream(
-      wirelens_test::byte_payload(
-          "POST /upload HTTP/1.1\r\nHost: example.test\r\n\r\nGET /" + bodySentinel +
-          " HTTP/1.1\r\nHost: example.test\r\n\r\n"),
+      wirelens_test::byte_payload("POST /upload HTTP/1.1\r\nHost: example.test\r\n\r\nGET /" +
+                                  bodySentinel + " HTTP/1.1\r\nHost: example.test\r\n\r\n"),
       true);
   REQUIRE(capture.httpExchanges.size() == 1U);
   REQUIRE(capture.httpExchanges.front().request->target == "/upload");
