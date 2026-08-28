@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up pnpm 11.24.0
         uses: pnpm/action-setup@v4
