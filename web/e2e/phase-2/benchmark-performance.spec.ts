@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { arch, cpus, platform, release, totalmem } from 'node:os';
-import { buildBenchmarkCapture } from '../../../benchmarks/src/fixtures';
+import { BENCHMARK_PROFILES, buildBenchmarkCapture } from '../../../benchmarks/src/fixtures';
 import {
   validateBenchmarkResult,
   type BenchmarkResult,
@@ -106,12 +106,9 @@ test('records browser and WASM benchmark measurements without timing thresholds'
 }, testInfo) => {
   test.skip(process.env.WIRELENS_BENCHMARK !== '1', 'Opt-in benchmark; set WIRELENS_BENCHMARK=1');
   test.skip(browserName !== 'chromium', 'The reproducible browser benchmark baseline is Chromium');
-  test.setTimeout(180_000);
+  test.setTimeout(600_000);
   const fixtures: BenchmarkResult['fixtures'] = [];
-  for (const profile of [
-    { name: 'small', packetCount: 3 },
-    { name: 'medium', packetCount: 1024 },
-  ] as const) {
+  for (const profile of BENCHMARK_PROFILES) {
     const capture = buildBenchmarkCapture(profile);
     const wasm: Record<
       | 'moduleStartupMs'
@@ -182,14 +179,6 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       },
     });
   }
-  fixtures.push({
-    profile: 'limit-near',
-    bytes: buildBenchmarkCapture({ name: 'limit-near', packetCount: 65_535 }).bytes.byteLength,
-    packetCount: 65_535,
-    native: null,
-    wasm: null,
-    browser: null,
-  });
   const outputPath = process.env.WIRELENS_BENCHMARK_OUTPUT;
   const commandPrefix = outputPath
     ? `WIRELENS_BENCHMARK=1 WIRELENS_BENCHMARK_OUTPUT=${outputPath}`

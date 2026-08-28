@@ -10,6 +10,11 @@ export const handshakeFixturePath = resolve(
 
 export const dnsFixturePath = resolve(e2eDirectory, '../../fixtures/generated/dns-exchanges.pcap');
 
+export const ipv6UdpPcapngFixturePath = resolve(
+  e2eDirectory,
+  '../../fixtures/generated/ipv6-udp.pcapng',
+);
+
 export const httpFixturePath = resolve(
   e2eDirectory,
   '../../fixtures/generated/plaintext-http.pcap',
