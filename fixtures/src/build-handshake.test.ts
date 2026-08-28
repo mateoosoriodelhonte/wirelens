@@ -113,16 +113,11 @@ describe('checked-in Phase 2 fixtures', () => {
       if (manifest.packets.every((packet) => typeof packet === 'number')) {
         expect(manifestText).toContain(`"packets": [${manifest.packets.join(', ')}]`);
       }
-      if (!['plaintext-http.pcap', 'tls-handshake.pcap'].includes(file)) {
-        expect(() =>
-          JSON.parse(
-            readFileSync(
-              resolve(import.meta.dirname, '../expected', `${file}.capture.json`),
-              'utf8',
-            ),
-          ),
-        ).not.toThrow();
-      }
+      expect(() =>
+        JSON.parse(
+          readFileSync(resolve(import.meta.dirname, '../expected', `${file}.capture.json`), 'utf8'),
+        ),
+      ).not.toThrow();
     }
   });
 
