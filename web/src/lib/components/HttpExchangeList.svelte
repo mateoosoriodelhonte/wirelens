@@ -48,7 +48,7 @@
               <code>{exchange.request.line}</code>
               {#if exchange.request.headers.length > 0}
                 <dl class="headers">
-                  {#each exchange.request.headers as header (`request-${exchange.id}-${header.name}`)}
+                  {#each exchange.request.headers as header, headerIndex (`request-${exchange.id}-${header.name}-${headerIndex}`)}
                     <div>
                       <dt>{header.name}</dt>
                       <dd class:redacted={header.redacted || header.value === null}>
@@ -67,7 +67,7 @@
               <code>{exchange.response.line}</code>
               {#if exchange.response.headers.length > 0}
                 <dl class="headers">
-                  {#each exchange.response.headers as header (`response-${exchange.id}-${header.name}`)}
+                  {#each exchange.response.headers as header, headerIndex (`response-${exchange.id}-${header.name}-${headerIndex}`)}
                     <div>
                       <dt>{header.name}</dt>
                       <dd class:redacted={header.redacted || header.value === null}>

@@ -83,4 +83,31 @@ describe('HttpExchangeList', () => {
     render(HttpExchangeList, { props: { exchanges, onSelectPacket: () => {} } });
     expect(screen.queryByText('Bearer hidden-secret')).not.toBeInTheDocument();
   });
+
+  it('renders repeated header names without a duplicate-key failure', () => {
+    const repeatedHeaders: HttpExchange = {
+      ...exchanges[0],
+      request: {
+        ...exchanges[0].request!,
+        headers: [
+          { name: 'accept', value: 'text/plain', redacted: false },
+          { name: 'accept', value: 'application/json', redacted: false },
+        ],
+      },
+      response: {
+        ...exchanges[0].response!,
+        headers: [
+          { name: 'server', value: 'first', redacted: false },
+          { name: 'server', value: 'second', redacted: false },
+        ],
+      },
+    };
+    render(HttpExchangeList, { props: { exchanges: [repeatedHeaders], onSelectPacket: () => {} } });
+    expect(screen.getAllByText('accept')).toHaveLength(2);
+    expect(screen.getByText('text/plain')).toBeVisible();
+    expect(screen.getByText('application/json')).toBeVisible();
+    expect(screen.getAllByText('server')).toHaveLength(2);
+    expect(screen.getByText('first')).toBeVisible();
+    expect(screen.getByText('second')).toBeVisible();
+  });
 });
