@@ -70,7 +70,8 @@
     ><tbody
       >{#each flow.events as event (event.packetNumber)}<tr
           ><th scope="row">{event.packetNumber}</th><td
-            ><strong>{event.label}</strong><br /><span>{tcpEventLearningText(event.label)}</span></td
+            ><strong>{event.label}</strong><br /><span>{tcpEventLearningText(event.label)}</span
+            ></td
           ><td>{direction(event) === 'client-to-server' ? 'Client → server' : 'Server → client'}</td
           ><td>{elapsed(event)}</td></tr
         >{/each}</tbody
