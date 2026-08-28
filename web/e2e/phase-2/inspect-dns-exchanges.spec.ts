@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dnsFixturePath } from '../fixtures';
+import { dnsFixturePath, readyCaptureInput } from '../fixtures';
 
 test('inspects synthetic DNS exchanges and follows packet evidence', async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
@@ -25,7 +25,7 @@ test('inspects synthetic DNS exchanges and follows packet evidence', async ({ pa
   await expect(
     page.getByText('.pcap · .pcapng · up to 64 MiB · drag and drop also works'),
   ).toBeVisible();
-  await page.getByLabel('Capture file').setInputFiles(dnsFixturePath);
+  await (await readyCaptureInput(page)).setInputFiles(dnsFixturePath);
 
   const dns = page.getByRole('region', { name: 'DNS exchanges' });
   await expect(dns).toBeVisible();

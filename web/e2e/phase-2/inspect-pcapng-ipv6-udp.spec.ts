@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ipv6UdpPcapngFixturePath } from '../fixtures';
+import { ipv6UdpPcapngFixturePath, readyCaptureInput } from '../fixtures';
 
 test('inspects PCAPNG IPv6 and UDP evidence through the browser worker', async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -22,7 +22,7 @@ test('inspects PCAPNG IPv6 and UDP evidence through the browser worker', async (
   });
 
   await page.goto('/');
-  await page.getByLabel('Capture file').setInputFiles(ipv6UdpPcapngFixturePath);
+  await (await readyCaptureInput(page)).setInputFiles(ipv6UdpPcapngFixturePath);
 
   const overview = page.getByRole('region', { name: 'Capture overview' });
   await expect(overview).toBeVisible();

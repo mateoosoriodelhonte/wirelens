@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dnsFixturePath } from '../fixtures';
+import { dnsFixturePath, readyCaptureInput } from '../fixtures';
 
 test('filters and searches DNS evidence, highlights exact bytes, and follows an observation', async ({
   page,
@@ -24,7 +24,7 @@ test('filters and searches DNS evidence, highlights exact bytes, and follows an 
   });
 
   await page.goto('/');
-  await page.getByLabel('Capture file').setInputFiles(dnsFixturePath);
+  await (await readyCaptureInput(page)).setInputFiles(dnsFixturePath);
 
   const filter = page.getByLabel('Packet filter');
   const search = page.getByLabel('Search packet facts');

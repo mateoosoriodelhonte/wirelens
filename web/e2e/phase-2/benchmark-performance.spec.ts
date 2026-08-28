@@ -9,6 +9,7 @@ import {
   type MemorySamples,
   type Samples,
 } from '../../../benchmarks/src/result';
+import { readyCaptureInput } from '../fixtures';
 
 const RUNS = 3;
 
@@ -129,7 +130,9 @@ test('records browser and WASM benchmark measurements without timing thresholds'
     for (let run = 0; run < RUNS; run += 1) {
       await page.goto('/');
       const start = await page.evaluate(() => performance.now());
-      await page.getByLabel('Capture file').setInputFiles({
+      await (
+        await readyCaptureInput(page)
+      ).setInputFiles({
         name: `${profile.name}.pcap`,
         mimeType: 'application/vnd.tcpdump.pcap',
         buffer: Buffer.from(capture.bytes),

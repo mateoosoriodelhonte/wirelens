@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { tcpResetFixturePath, tcpRetransmissionFixturePath } from '../fixtures';
+import { readyCaptureInput, tcpResetFixturePath, tcpRetransmissionFixturePath } from '../fixtures';
 
 function channel(value: number): number {
   const normalized = value / 255;
@@ -41,7 +41,7 @@ test('inspects TCP reset and conservative retransmission evidence', async ({ pag
   });
 
   await page.goto('/');
-  const input = page.getByLabel('Capture file');
+  const input = await readyCaptureInput(page);
   await input.setInputFiles(tcpResetFixturePath);
 
   const observations = page.getByRole('region', { name: 'Observations' });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { handshakeFixturePath } from '../fixtures';
+import { handshakeFixturePath, readyCaptureInput } from '../fixtures';
 
 test('inspects the synthetic TCP handshake from file selection to packet details', async ({
   page,
@@ -28,7 +28,7 @@ test('inspects the synthetic TCP handshake from file selection to packet details
     page.getByRole('heading', { name: 'Inspect a capture on this device' }),
   ).toBeVisible();
 
-  await page.getByLabel('Capture file').setInputFiles(handshakeFixturePath);
+  await (await readyCaptureInput(page)).setInputFiles(handshakeFixturePath);
   await expect(page.getByRole('heading', { name: 'Capture overview' })).toBeVisible();
   await expect(page.getByText('3 packets', { exact: true })).toBeVisible();
   await expect(

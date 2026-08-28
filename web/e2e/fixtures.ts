@@ -1,7 +1,14 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expect, type Page } from '@playwright/test';
 
 const e2eDirectory = dirname(fileURLToPath(import.meta.url));
+
+export async function readyCaptureInput(page: Page) {
+  const input = page.getByLabel('Capture file');
+  await expect(input).toBeEnabled();
+  return input;
+}
 
 export const handshakeFixturePath = resolve(
   e2eDirectory,
