@@ -75,7 +75,14 @@
         Selected field: bytes {range.start}–{range.endExclusive - 1}.
       </p>
     {:else}
-      <p class="range-note warning" id="hex-range-note" role="status">{rangeMessage(range)}</p>
+      <p
+        class="range-note"
+        class:warning={range.kind === 'invalid'}
+        id="hex-range-note"
+        role="status"
+      >
+        {rangeMessage(range)}
+      </p>
     {/if}
     <p class="selection-help" id="hex-selection-help">
       Selected bytes are marked in the hex column. Use Tab to move between rows.
@@ -142,6 +149,7 @@
     display: grid;
     gap: 0.75rem;
     min-width: 0;
+    overflow-x: auto;
     padding: 1rem;
     border: 1px solid var(--line);
     border-radius: 0.75rem;
@@ -176,6 +184,7 @@
   }
   table {
     width: 100%;
+    min-width: 34rem;
     border-collapse: collapse;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.78rem;
@@ -237,11 +246,8 @@
     border: 0;
   }
   @media (max-width: 42rem) {
-    .hex-view {
-      overflow-x: auto;
-    }
-    table {
-      min-width: 34rem;
+    .heading {
+      align-items: start;
     }
   }
 </style>

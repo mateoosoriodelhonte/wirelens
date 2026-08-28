@@ -67,6 +67,7 @@
 <style>
   .packet-table {
     display: grid;
+    align-content: start;
     gap: 1rem;
     padding: 1.5rem;
     background: var(--surface);

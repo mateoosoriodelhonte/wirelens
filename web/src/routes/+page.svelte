@@ -316,22 +316,6 @@
               {selectedByteRange}
               onSelectByteRange={(range) => (selectedByteRange = range)}
             />
-            <HexView
-              bytes={captureState.status === 'ready' &&
-              captureState.packetBytes.status === 'ready' &&
-              captureState.packetBytes.packetId === selectedPacket.id
-                ? captureState.packetBytes.buffer
-                : null}
-              loading={captureState.status === 'ready' &&
-                captureState.packetBytes.status === 'loading' &&
-                captureState.packetBytes.packetId === selectedPacket.id}
-              error={captureState.status === 'ready' &&
-              captureState.packetBytes.status === 'error' &&
-              captureState.packetBytes.packetId === selectedPacket.id
-                ? captureState.packetBytes.error.message
-                : null}
-              fieldRange={selectedByteRange}
-            />
           {:else}
             <section class="no-packets" aria-label="No matching packet details">
               <strong>No matching packet is selected.</strong>
@@ -340,6 +324,24 @@
           {/if}
         </div>
       </div>
+      {#if selectedPacket}
+        <HexView
+          bytes={captureState.status === 'ready' &&
+          captureState.packetBytes.status === 'ready' &&
+          captureState.packetBytes.packetId === selectedPacket.id
+            ? captureState.packetBytes.buffer
+            : null}
+          loading={captureState.status === 'ready' &&
+            captureState.packetBytes.status === 'loading' &&
+            captureState.packetBytes.packetId === selectedPacket.id}
+          error={captureState.status === 'ready' &&
+          captureState.packetBytes.status === 'error' &&
+          captureState.packetBytes.packetId === selectedPacket.id
+            ? captureState.packetBytes.error.message
+            : null}
+          fieldRange={selectedByteRange}
+        />
+      {/if}
     </div>
   {/if}
 </main>
@@ -501,6 +503,7 @@
     gap: 1rem;
   }
   .packet-split {
+    align-items: start;
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   }
   .inspection-stack {
