@@ -45,7 +45,9 @@ test('shows sanitized HTTP and bounded TLS handshake evidence', async ({ page },
   await expect(requestEvidence).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Packet details' })).toBeFocused();
-  await expect(page.getByText('Packet 5', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Packet details' }).getByText('Packet 5', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'HTTP', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('http-redaction.png'), fullPage: true });
 
@@ -64,7 +66,9 @@ test('shows sanitized HTTP and bounded TLS handshake evidence', async ({ page },
 
   await tls.getByRole('button', { name: 'View TLS ServerHello packet 5' }).click();
   await expect(page.getByRole('heading', { name: 'Packet details' })).toBeFocused();
-  await expect(page.getByText('Packet 5', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Packet details' }).getByText('Packet 5', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'TLS', exact: true })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

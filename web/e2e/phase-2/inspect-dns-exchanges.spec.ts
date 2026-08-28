@@ -38,7 +38,9 @@ test('inspects synthetic DNS exchanges and follows packet evidence', async ({ pa
 
   await dns.getByRole('button', { name: 'View response packet 2 for example.com' }).click();
   await expect(page.getByRole('heading', { name: 'Packet details' })).toBeFocused();
-  await expect(page.getByText('Packet 2', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Packet details' }).getByText('Packet 2', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'DNS', exact: true })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
