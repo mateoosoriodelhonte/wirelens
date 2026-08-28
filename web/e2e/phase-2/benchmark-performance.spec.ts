@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { arch, cpus, platform, release, totalmem } from 'node:os';
 import { buildBenchmarkCapture } from '../../../benchmarks/src/fixtures';
 import {
   validateBenchmarkResult,
@@ -100,6 +101,7 @@ async function measureWasmInPage(page: Page, bytes: Uint8Array): Promise<WasmMea
 
 test('records browser and WASM benchmark measurements without timing thresholds', async ({
   page,
+  browser,
   browserName,
 }, testInfo) => {
   test.skip(process.env.WIRELENS_BENCHMARK !== '1', 'Opt-in benchmark; set WIRELENS_BENCHMARK=1');
@@ -195,10 +197,10 @@ test('records browser and WASM benchmark measurements without timing thresholds'
   const browserResult = validateBenchmarkResult({
     schemaVersion: 'wirelens-benchmark/v1',
     metadata: {
-      hardware: `browser-reported ${await page.evaluate(() => navigator.hardwareConcurrency ?? 'unknown')} logical CPUs`,
-      os: await page.evaluate(() => navigator.platform || 'unknown'),
-      browser: testInfo.project.name,
-      runtime: await page.evaluate(() => navigator.userAgent),
+      hardware: `${cpus()[0]?.model ?? 'unknown'}; ${cpus().length} logical CPUs; ${Math.round(totalmem() / 1024 ** 3)} GiB RAM; ${arch()}`,
+      os: `${platform()} ${release()}`,
+      browser: `${testInfo.project.name} ${browser.version()} (Playwright Desktop Chrome emulation)`,
+      runtime: `node ${process.version}; ${await page.evaluate(() => navigator.userAgent)}`,
       buildType: 'production',
       command:
         commandPrefix +
