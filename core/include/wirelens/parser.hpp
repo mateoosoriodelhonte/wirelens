@@ -30,7 +30,8 @@ constexpr std::size_t kMaxHttpMethodBytes = 32U;
 constexpr std::size_t kMaxHttpReasonBytes = 256U;
 constexpr std::size_t kMaxTlsRecordBytes = 18U * 1024U;
 constexpr std::size_t kMaxTlsHandshakeBytes = 16U * 1024U;
-constexpr std::size_t kMaxTlsExtensionBytes = 16U * 1024U;
+// Keep this below the handshake cap so a valid hello can reach the extension boundary.
+constexpr std::size_t kMaxTlsExtensionBytes = 12U * 1024U;
 constexpr std::size_t kMaxTlsServerNameBytes = 253U;
 constexpr std::size_t kMaxTlsOfferedVersions = 64U;
 using ParseResult = std::variant<CaptureDocument, ParseError>;

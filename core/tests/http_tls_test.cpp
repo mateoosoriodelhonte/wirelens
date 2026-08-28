@@ -18,12 +18,35 @@ void append16(std::vector<std::byte>& bytes, const std::uint16_t value) {
   bytes.push_back(static_cast<std::byte>(value));
 }
 
+std::uint16_t read16(const std::vector<std::byte>& bytes, const std::size_t offset) {
+  return static_cast<std::uint16_t>((std::to_integer<std::uint8_t>(bytes[offset]) << 8U) |
+                                    std::to_integer<std::uint8_t>(bytes[offset + 1U]));
+}
+
+std::uint32_t read24(const std::vector<std::byte>& bytes, const std::size_t offset) {
+  return (static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(bytes[offset])) << 16U) |
+         (static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(bytes[offset + 1U])) << 8U) |
+         std::to_integer<std::uint8_t>(bytes[offset + 2U]);
+}
+
+void write16(std::vector<std::byte>& bytes, const std::size_t offset, const std::uint16_t value) {
+  bytes[offset] = static_cast<std::byte>(value >> 8U);
+  bytes[offset + 1U] = static_cast<std::byte>(value);
+}
+
+void write24(std::vector<std::byte>& bytes, const std::size_t offset, const std::uint32_t value) {
+  bytes[offset] = static_cast<std::byte>(value >> 16U);
+  bytes[offset + 1U] = static_cast<std::byte>(value >> 8U);
+  bytes[offset + 2U] = static_cast<std::byte>(value);
+}
+
 std::vector<std::byte>
 client_hello(const std::string& serverName = "example.test",
              const std::vector<std::uint16_t>& offeredVersions = {0x0304U, 0x0303U},
              const std::vector<std::byte>& sessionId = {},
              const std::vector<std::uint16_t>& ciphers = {0x1301U},
-             const std::vector<std::byte>& compressionMethods = {std::byte{0}}) {
+             const std::vector<std::byte>& compressionMethods = {std::byte{0}},
+             const std::size_t extraExtensionBytes = 0U) {
   std::vector<std::byte> body;
   append16(body, 0x0303U);
   body.resize(body.size() + 32U, std::byte{0x11});
@@ -47,6 +70,11 @@ client_hello(const std::string& serverName = "example.test",
   extensions.push_back(static_cast<std::byte>(offeredVersions.size() * 2U));
   for (const auto offered : offeredVersions)
     append16(extensions, offered);
+  if (extraExtensionBytes > 0U) {
+    append16(extensions, 100U);
+    append16(extensions, static_cast<std::uint16_t>(extraExtensionBytes));
+    extensions.resize(extensions.size() + extraExtensionBytes, std::byte{0});
+  }
   append16(body, static_cast<std::uint16_t>(extensions.size()));
   body.insert(body.end(), extensions.begin(), extensions.end());
   std::vector<std::byte> result{std::byte{22}, std::byte{3}, std::byte{3}};
@@ -426,6 +454,23 @@ TEST_CASE("HTTP rejects absolute-form request userinfo and preserves origin-form
                               8443}});
   REQUIRE(origin.httpExchanges.size() == 1U);
   REQUIRE(origin.httpExchanges.front().request->target == "/user@foo");
+
+  const auto uppercaseCredential =
+      parse({{true,
+              1000,
+              0,
+              0x10,
+              wirelens_test::byte_payload(
+                  "GET HTTP://user:SECRET_SENTINEL@example.test/path HTTP/1.1\r\n\r\n"),
+              {},
+              {},
+              0,
+              false,
+              40000,
+              8443}});
+  REQUIRE(uppercaseCredential.httpExchanges.empty());
+  const auto uppercaseSerialized = wirelens::serialize_capture(uppercaseCredential);
+  REQUIRE(uppercaseSerialized.find("SECRET_SENTINEL") == std::string::npos);
 }
 
 TEST_CASE("HTTP line length accepts 8 KiB and rejects the next byte") {
@@ -496,10 +541,45 @@ TEST_CASE("TLS limits and malformed extension lengths fail closed") {
   REQUIRE(malformed.diagnostics.front().code == "TLS_MALFORMED");
 }
 
+TEST_CASE("TLS record, handshake, and extension limits accept the boundary and reject one more") {
+  auto recordExact = client_hello();
+  const auto recordPadding = wirelens::kMaxTlsRecordBytes - read16(recordExact, 3U);
+  recordExact.insert(recordExact.end(), recordPadding, std::byte{0});
+  write16(recordExact, 3U, static_cast<std::uint16_t>(wirelens::kMaxTlsRecordBytes));
+  REQUIRE(parse_tls_stream(recordExact, true).tlsHandshakes.size() == 1U);
+  auto recordNext = recordExact;
+  write16(recordNext, 3U, static_cast<std::uint16_t>(wirelens::kMaxTlsRecordBytes + 1U));
+  const auto recordRejected = parse_tls_stream(recordNext, true);
+  REQUIRE(recordRejected.tlsHandshakes.empty());
+  REQUIRE(recordRejected.diagnostics.front().code == "TLS_RECORD_LIMIT");
+
+  const auto handshakeExact =
+      client_hello("example.test", {0x0304U, 0x0303U}, {},
+                   std::vector<std::uint16_t>(2028U, 0x1301U), {std::byte{0}}, 12253U);
+  REQUIRE(read24(handshakeExact, 6U) == wirelens::kMaxTlsHandshakeBytes);
+  REQUIRE(parse_tls_stream(handshakeExact, true).tlsHandshakes.size() == 1U);
+  auto handshakeNext = handshakeExact;
+  write24(handshakeNext, 6U, static_cast<std::uint32_t>(wirelens::kMaxTlsHandshakeBytes + 1U));
+  const auto handshakeRejected = parse_tls_stream(handshakeNext, true);
+  REQUIRE(handshakeRejected.tlsHandshakes.empty());
+  REQUIRE(handshakeRejected.diagnostics.front().code == "TLS_HANDSHAKE_LIMIT");
+
+  const auto extensionExact =
+      client_hello("example.test", {0x0304U, 0x0303U}, {}, {0x1301U}, {std::byte{0}},
+                   wirelens::kMaxTlsExtensionBytes - 30U - 4U);
+  REQUIRE(parse_tls_stream(extensionExact, true).tlsHandshakes.size() == 1U);
+  const auto extensionNext =
+      client_hello("example.test", {0x0304U, 0x0303U}, {}, {0x1301U}, {std::byte{0}},
+                   wirelens::kMaxTlsExtensionBytes - 30U - 3U);
+  const auto extensionRejected = parse_tls_stream(extensionNext, true);
+  REQUIRE(extensionRejected.tlsHandshakes.empty());
+  REQUIRE(extensionRejected.diagnostics.front().code == "TLS_EXTENSION_LIMIT");
+}
+
 TEST_CASE("TCP application retention enforces direction and capture budgets") {
   wirelens::CaptureDocument capture;
   std::vector<std::vector<std::byte>> payloads(
-      65U,
+      64U,
       std::vector<std::byte>(wirelens::kMaxRetainedApplicationBytesPerDirection, std::byte{'x'}));
   std::vector<wirelens::internal::ParsedPacket> packets;
   for (std::size_t index = 0; index < payloads.size(); ++index) {
@@ -527,25 +607,57 @@ TEST_CASE("TCP application retention enforces direction and capture budgets") {
     packet.tcp.valid = true;
     packet.tcp.sequence = 1000U;
     packet.tcp.payload = payloads[index];
+    packet.tcp.payloadComplete = true;
     packet.packet.number = index + 1U;
     packets.push_back(packet);
   }
-  packets.front().tcp.payload = payloads.front();
-  payloads.push_back(std::vector<std::byte>(1U, std::byte{'y'}));
-  wirelens::internal::ParsedPacket extra;
-  extra.packet.flowId = "tcp-flow-1";
-  extra.packet.sourceEndpointId = "endpoint-1";
-  extra.packet.number = 66U;
-  extra.tcp.valid = true;
-  extra.tcp.sequence = 1000U + wirelens::kMaxRetainedApplicationBytesPerDirection;
-  extra.tcp.payload = payloads.back();
-  packets.push_back(extra);
+  auto finalFlow = capture.flows.front();
+  finalFlow.id = "tcp-flow-65";
+  finalFlow.clientEndpointId = "endpoint-65";
+  finalFlow.serverEndpointId = "endpoint-65";
+  capture.flows.push_back(finalFlow);
+  const std::array<std::byte, 1> finalPayload{std::byte{'y'}};
+  wirelens::internal::ParsedPacket finalPacket;
+  finalPacket.packet.flowId = "tcp-flow-65";
+  finalPacket.packet.sourceEndpointId = "endpoint-65";
+  finalPacket.packet.number = 65U;
+  finalPacket.tcp.valid = true;
+  finalPacket.tcp.sequence = 1000U;
+  finalPacket.tcp.payload = finalPayload;
+  finalPacket.tcp.payloadComplete = true;
+  packets.push_back(finalPacket);
   const auto streams = wirelens::internal::reconstruct_tcp_prefixes(capture, packets);
   REQUIRE(streams.size() == 65U);
-  REQUIRE(streams.at(0).bytes.size() == wirelens::kMaxRetainedApplicationBytesPerDirection);
-  REQUIRE(streams.at(0).limited);
+  for (std::size_t index = 0; index < 64U; ++index) {
+    REQUIRE(streams.at(index).bytes.size() == wirelens::kMaxRetainedApplicationBytesPerDirection);
+    REQUIRE_FALSE(streams.at(index).limited);
+  }
   REQUIRE(streams.back().limited);
   REQUIRE(streams.back().bytes.empty());
+  REQUIRE(std::any_of(
+      capture.diagnostics.begin(), capture.diagnostics.end(),
+      [](const auto& diagnostic) { return diagnostic.code == "APPLICATION_CAPTURE_LIMIT"; }));
+
+  wirelens::CaptureDocument directionCapture;
+  directionCapture.flows.push_back(capture.flows.front());
+  const auto exact = packets.front();
+  const auto exactStreams = wirelens::internal::reconstruct_tcp_prefixes(directionCapture, {exact});
+  REQUIRE(exactStreams.size() == 1U);
+  REQUIRE(exactStreams.front().bytes.size() == wirelens::kMaxRetainedApplicationBytesPerDirection);
+  REQUIRE_FALSE(exactStreams.front().limited);
+  auto over = exact;
+  const std::array<std::byte, 1> extraPayload{std::byte{'y'}};
+  over.packet.number = 2U;
+  over.tcp.sequence = 1000U + wirelens::kMaxRetainedApplicationBytesPerDirection;
+  over.tcp.payload = extraPayload;
+  const auto overStreams =
+      wirelens::internal::reconstruct_tcp_prefixes(directionCapture, {exact, over});
+  REQUIRE(overStreams.size() == 1U);
+  REQUIRE(overStreams.front().bytes.size() == wirelens::kMaxRetainedApplicationBytesPerDirection);
+  REQUIRE(overStreams.front().limited);
+  REQUIRE(std::any_of(
+      directionCapture.diagnostics.begin(), directionCapture.diagnostics.end(),
+      [](const auto& diagnostic) { return diagnostic.code == "APPLICATION_DIRECTION_LIMIT"; }));
 }
 
 TEST_CASE("Malformed TLS on port 443 produces no TLS claim") {
@@ -613,22 +725,26 @@ TEST_CASE("HTTP header byte budget rejects a terminator beyond the exact limit")
   stream.complete = true;
   const auto prefix = wirelens_test::byte_payload("GET / HTTP/1.1\r\n");
   stream.bytes = prefix;
-  const auto lineSize = (wirelens::kMaxHttpHeaderBytes - prefix.size() - 4U) / 4U;
-  REQUIRE(lineSize <= wirelens::kMaxHttpLineBytes);
+  const auto baseLineSize = (wirelens::kMaxHttpHeaderBytes - prefix.size() - 2U) / 4U;
+  const auto remainder = (wirelens::kMaxHttpHeaderBytes - prefix.size() - 2U) % 4U;
+  REQUIRE(baseLineSize <= wirelens::kMaxHttpLineBytes);
   for (int line = 0; line < 4; ++line) {
+    const auto lineSize = baseLineSize + (static_cast<std::size_t>(line) < remainder ? 1U : 0U);
+    REQUIRE(lineSize <= wirelens::kMaxHttpLineBytes);
     stream.bytes.push_back(std::byte{'X'});
     stream.bytes.push_back(std::byte{':'});
     stream.bytes.resize(stream.bytes.size() + lineSize - 4U, std::byte{'a'});
     stream.bytes.push_back(std::byte{'\r'});
     stream.bytes.push_back(std::byte{'\n'});
   }
-  const auto terminator = wirelens_test::byte_payload("\r\n\r\n");
+  const auto terminator = wirelens_test::byte_payload("\r\n");
   stream.bytes.insert(stream.bytes.end(), terminator.begin(), terminator.end());
   REQUIRE(stream.bytes.size() == wirelens::kMaxHttpHeaderBytes);
   std::vector<wirelens::internal::ParsedPacket> packets;
   wirelens::internal::build_http(capture, packets, {stream});
   REQUIRE(capture.httpExchanges.size() == 1U);
   stream.bytes.insert(stream.bytes.end() - 4, std::byte{'a'});
+  REQUIRE(stream.bytes.size() == wirelens::kMaxHttpHeaderBytes + 1U);
   capture.httpExchanges.clear();
   wirelens::internal::build_http(capture, packets, {stream});
   REQUIRE(capture.httpExchanges.empty());
@@ -668,6 +784,21 @@ TEST_CASE("HTTP method and reason lengths stay within schema caps") {
   const auto rejectedReason =
       parse_http_stream(wirelens_test::byte_payload("HTTP/1.1 200 " + reason + "a\r\n\r\n"), false);
   REQUIRE(rejectedReason.httpExchanges.empty());
+}
+
+TEST_CASE("HTTP rejects an empty request method") {
+  const auto capture = parse({{true,
+                               1000,
+                               0,
+                               0x10,
+                               wirelens_test::byte_payload(" / HTTP/1.1\r\n\r\n"),
+                               {},
+                               {},
+                               0,
+                               false,
+                               40000,
+                               8443}});
+  REQUIRE(capture.httpExchanges.empty());
 }
 
 TEST_CASE("HTTP rejects non-ASCII allowlisted values before serialization") {

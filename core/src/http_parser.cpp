@@ -128,13 +128,27 @@ std::string redact_target(const std::string_view target) {
 }
 
 bool absolute_target_has_userinfo(const std::string_view target) {
-  std::string_view authority;
-  if (target.starts_with("http://"))
-    authority = target.substr(7U);
-  else if (target.starts_with("https://"))
-    authority = target.substr(8U);
+  const auto starts_with_ascii_case_insensitive = [](const std::string_view value,
+                                                     const std::string_view prefix) {
+    if (value.size() < prefix.size())
+      return false;
+    return std::equal(
+        prefix.begin(), prefix.end(), value.begin(), [](const auto left, const auto right) {
+          const auto fold = [](const char character) {
+            return character >= 'A' && character <= 'Z' ? static_cast<char>(character + ('a' - 'A'))
+                                                        : character;
+          };
+          return fold(left) == fold(right);
+        });
+  };
+  std::size_t authorityBegin = 0;
+  if (starts_with_ascii_case_insensitive(target, "http://"))
+    authorityBegin = 7U;
+  else if (starts_with_ascii_case_insensitive(target, "https://"))
+    authorityBegin = 8U;
   else
     return false;
+  auto authority = target.substr(authorityBegin);
   authority = authority.substr(0, authority.find_first_of("/?"));
   return authority.find('@') != std::string_view::npos;
 }
@@ -185,8 +199,9 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
   const auto secondSpace =
       firstSpace == std::string::npos ? std::string::npos : line.find(' ', firstSpace + 1U);
   const bool isRequest =
-      !isResponse && firstSpace != std::string::npos && secondSpace != std::string::npos &&
-      secondSpace > firstSpace + 1U && line.size() > secondSpace + 1U &&
+      !isResponse && firstSpace != std::string::npos && firstSpace > 0U &&
+      secondSpace != std::string::npos && secondSpace > firstSpace + 1U &&
+      line.size() > secondSpace + 1U &&
       (line.substr(secondSpace + 1U) == "HTTP/1.0" || line.substr(secondSpace + 1U) == "HTTP/1.1");
   if (!isRequest && !isResponse)
     return std::nullopt;

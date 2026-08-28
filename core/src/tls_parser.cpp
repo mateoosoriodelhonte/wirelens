@@ -81,7 +81,7 @@ std::vector<std::size_t> evidence_packets(const ApplicationStream& stream, const
 
 bool parse_extensions(const std::vector<std::byte>& bytes, const std::size_t begin,
                       const std::size_t length, Hello& hello, bool& serverNameLimit) {
-  if (length > kMaxTlsExtensionBytes || begin > bytes.size() || length > bytes.size() - begin)
+  if (begin > bytes.size() || length > bytes.size() - begin)
     return false;
   const auto end = begin + length;
   std::size_t cursor = begin;
@@ -230,8 +230,18 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
       if (position + 2U <= helloEnd) {
         const auto extensionLength = u16(bytes, position);
         position += 2U;
-        if (extensionLength != helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
+        if (extensionLength != helloEnd - position)
           return std::nullopt;
+        if (extensionLength > kMaxTlsExtensionBytes) {
+          add_diagnostic(capture,
+                         {"warning", "TLS_EXTENSION_LIMIT",
+                          "TLS extensions exceed the 12 KiB limit", stream.flowId, std::nullopt,
+                          stream.packetNumbers.empty()
+                              ? std::nullopt
+                              : std::optional<std::size_t>{stream.packetNumbers.front()},
+                          1U});
+          return std::nullopt;
+        }
         if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
           if (serverNameLimit)
             add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT",
@@ -284,8 +294,18 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
     if (position + 2U <= helloEnd) {
       const auto extensionLength = u16(bytes, position);
       position += 2U;
-      if (extensionLength != helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
+      if (extensionLength != helloEnd - position)
         return std::nullopt;
+      if (extensionLength > kMaxTlsExtensionBytes) {
+        add_diagnostic(capture,
+                       {"warning", "TLS_EXTENSION_LIMIT", "TLS extensions exceed the 12 KiB limit",
+                        stream.flowId, std::nullopt,
+                        stream.packetNumbers.empty()
+                            ? std::nullopt
+                            : std::optional<std::size_t>{stream.packetNumbers.front()},
+                        1U});
+        return std::nullopt;
+      }
       if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
         if (serverNameLimit)
           add_diagnostic(capture,
@@ -358,7 +378,8 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
                                                return diagnostic.context == stream.flowId &&
                                                       (diagnostic.code == "TLS_RECORD_LIMIT" ||
                                                        diagnostic.code == "TLS_HANDSHAKE_LIMIT" ||
-                                                       diagnostic.code == "TLS_SERVER_NAME_LIMIT");
+                                                       diagnostic.code == "TLS_SERVER_NAME_LIMIT" ||
+                                                       diagnostic.code == "TLS_EXTENSION_LIMIT");
                                              });
       if (recognized_tls_prefix(stream) && !specificLimit)
         add_diagnostic(capture, {"warning", "TLS_MALFORMED",
