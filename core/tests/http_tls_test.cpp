@@ -282,6 +282,69 @@ TEST_CASE("HTTP pairing keeps independent outstanding requests per flow") {
   REQUIRE(capture.httpExchanges.at(1).matched);
 }
 
+TEST_CASE("HTTP parses multiple safely framed exchanges on one persistent flow") {
+  const std::string body = "BODY_SECRET_SENTINEL";
+  const auto requests = wirelens_test::byte_payload(
+      "POST /one HTTP/1.1\r\nHost: example.test\r\nContent-Length: " + std::to_string(body.size()) +
+      "\r\n\r\n" + body + "GET /two HTTP/1.1\r\nHost: example.test\r\n\r\n");
+  const auto responses =
+      wirelens_test::byte_payload("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+                                  "HTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n");
+  const auto capture = parse({{true, 1000, 0, 0x10, requests, {}, {}, 0, false, 40000, 8443},
+                              {false, 2000, 0, 0x10, responses, {}, {}, 10, false, 40000, 8443}});
+  REQUIRE(capture.httpExchanges.size() == 2U);
+  REQUIRE(capture.httpExchanges.at(0).matched);
+  REQUIRE(capture.httpExchanges.at(0).request->target == "/one");
+  REQUIRE(capture.httpExchanges.at(0).response->statusCode == 200U);
+  REQUIRE(capture.httpExchanges.at(1).matched);
+  REQUIRE(capture.httpExchanges.at(1).request->target == "/two");
+  REQUIRE(capture.httpExchanges.at(1).response->statusCode == 201U);
+  REQUIRE(wirelens::serialize_capture(capture).find(body) == std::string::npos);
+}
+
+TEST_CASE("HTTP does not parse header-like bytes from an unframed response body") {
+  const auto capture = parse_http_stream(
+      wirelens_test::byte_payload(
+          "HTTP/1.1 200 OK\r\n\r\nHTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n"),
+      false);
+  REQUIRE(capture.httpExchanges.size() == 1U);
+  REQUIRE(capture.httpExchanges.front().response->statusCode == 200U);
+}
+
+TEST_CASE("HTTP exchange count accepts the exact cap and rejects one more") {
+  const auto request = std::string{"GET / HTTP/1.1\r\n\r\n"};
+  auto parseCount = [&](const std::size_t count) {
+    wirelens::internal::ApplicationStream stream;
+    stream.flowId = "tcp-flow-1";
+    stream.fromClient = true;
+    stream.complete = true;
+    std::string bytes;
+    bytes.reserve(request.size() * count);
+    for (std::size_t index = 0; index < count; ++index)
+      bytes += request;
+    stream.bytes = wirelens_test::byte_payload(bytes);
+    stream.packetNumbers = {1U};
+    stream.bytePacketNumbers.assign(stream.bytes.size(), 1U);
+    wirelens::CaptureDocument capture;
+    std::vector<wirelens::internal::ParsedPacket> packets;
+    wirelens::internal::build_http(capture, packets, {stream});
+    return capture;
+  };
+
+  const auto exact = parseCount(wirelens::kMaxHttpExchanges);
+  REQUIRE(exact.httpExchanges.size() == wirelens::kMaxHttpExchanges);
+  REQUIRE(
+      std::none_of(exact.diagnostics.begin(), exact.diagnostics.end(), [](const auto& diagnostic) {
+        return diagnostic.code == "HTTP_EXCHANGE_LIMIT";
+      }));
+
+  const auto over = parseCount(wirelens::kMaxHttpExchanges + 1U);
+  REQUIRE(over.httpExchanges.size() == wirelens::kMaxHttpExchanges);
+  REQUIRE(std::any_of(over.diagnostics.begin(), over.diagnostics.end(), [](const auto& diagnostic) {
+    return diagnostic.code == "HTTP_EXCHANGE_LIMIT";
+  }));
+}
+
 TEST_CASE("HTTP matched latency stays null when timestamps are reversed") {
   const auto request = wirelens_test::byte_payload("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n");
   const auto response = wirelens_test::byte_payload("HTTP/1.1 200 OK\r\n\r\n");
@@ -473,6 +536,27 @@ TEST_CASE("HTTP rejects absolute-form request userinfo and preserves origin-form
   REQUIRE(uppercaseSerialized.find("SECRET_SENTINEL") == std::string::npos);
 }
 
+TEST_CASE("HTTP rejects userinfo in a non-HTTP absolute-form target") {
+  const auto capture =
+      parse({{true,
+              1000,
+              0,
+              0x10,
+              wirelens_test::byte_payload(
+                  "GET ftp://alice:SECRET_SENTINEL@example.test/path HTTP/1.1\r\n\r\n"),
+              {},
+              {},
+              0,
+              false,
+              40000,
+              8443}});
+  REQUIRE(capture.httpExchanges.empty());
+  const auto serialized = wirelens::serialize_capture(capture);
+  REQUIRE(serialized.find("SECRET_SENTINEL") == std::string::npos);
+  for (const auto& diagnostic : capture.diagnostics)
+    REQUIRE(diagnostic.message.find("SECRET_SENTINEL") == std::string::npos);
+}
+
 TEST_CASE("HTTP line length accepts 8 KiB and rejects the next byte") {
   const auto prefix = wirelens_test::byte_payload("GET /");
   const auto suffix = wirelens_test::byte_payload(" HTTP/1.1\r\n\r\n");
@@ -491,6 +575,22 @@ TEST_CASE("HTTP line length accepts 8 KiB and rejects the next byte") {
   capture.httpExchanges.clear();
   wirelens::internal::build_http(capture, packets, {stream});
   REQUIRE(capture.httpExchanges.empty());
+}
+
+TEST_CASE("HTTP query redaction cannot expand a line past the contract limit") {
+  std::string target = "/?";
+  for (std::size_t index = 0; index < 700U; ++index) {
+    if (index != 0U)
+      target.push_back('&');
+    target += "a=x";
+  }
+  const auto requestLine = "GET " + target + " HTTP/1.1";
+  REQUIRE(requestLine.size() + 2U <= wirelens::kMaxHttpLineBytes);
+  const auto capture =
+      parse_http_stream(wirelens_test::byte_payload(requestLine + "\r\n\r\n"), true);
+  REQUIRE(capture.httpExchanges.empty());
+  REQUIRE(std::any_of(capture.diagnostics.begin(), capture.diagnostics.end(),
+                      [](const auto& diagnostic) { return diagnostic.code == "HTTP_MALFORMED"; }));
 }
 
 TEST_CASE("TLS SNI accepts 253 bytes and rejects 254 bytes") {

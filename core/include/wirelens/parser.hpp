@@ -28,6 +28,7 @@ constexpr std::size_t kMaxHttpHeaderCount = 128U;
 constexpr std::size_t kMaxHttpLineBytes = 8U * 1024U;
 constexpr std::size_t kMaxHttpMethodBytes = 32U;
 constexpr std::size_t kMaxHttpReasonBytes = 256U;
+constexpr std::size_t kMaxHttpExchanges = 65'536U;
 constexpr std::size_t kMaxTlsRecordBytes = 18U * 1024U;
 constexpr std::size_t kMaxTlsHandshakeBytes = 16U * 1024U;
 // Keep this below the handshake cap so a valid hello can reach the extension boundary.

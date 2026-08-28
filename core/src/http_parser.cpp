@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <deque>
+#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -19,6 +21,7 @@ struct Message {
   bool fromClient = false;
   bool request = false;
   std::size_t end = 0;
+  std::optional<std::size_t> next;
   std::size_t firstPacket = 0;
   std::size_t completionPacket = 0;
   std::vector<std::size_t> packetNumbers;
@@ -128,25 +131,23 @@ std::string redact_target(const std::string_view target) {
 }
 
 bool absolute_target_has_userinfo(const std::string_view target) {
-  const auto starts_with_ascii_case_insensitive = [](const std::string_view value,
-                                                     const std::string_view prefix) {
-    if (value.size() < prefix.size())
-      return false;
-    return std::equal(
-        prefix.begin(), prefix.end(), value.begin(), [](const auto left, const auto right) {
-          const auto fold = [](const char character) {
-            return character >= 'A' && character <= 'Z' ? static_cast<char>(character + ('a' - 'A'))
-                                                        : character;
-          };
-          return fold(left) == fold(right);
-        });
-  };
-  std::size_t authorityBegin = 0;
-  if (starts_with_ascii_case_insensitive(target, "http://"))
-    authorityBegin = 7U;
-  else if (starts_with_ascii_case_insensitive(target, "https://"))
-    authorityBegin = 8U;
-  else
+  if (target.empty() || !std::isalpha(static_cast<unsigned char>(target.front())))
+    return false;
+  const auto colon = target.find(':');
+  if (colon == std::string_view::npos)
+    return false;
+  if (!std::all_of(target.begin() + 1, target.begin() + static_cast<std::ptrdiff_t>(colon),
+                   [](const auto character) {
+                     const auto byte = static_cast<unsigned char>(character);
+                     return std::isalnum(byte) != 0 || character == '+' || character == '-' ||
+                            character == '.';
+                   }))
+    return false;
+  const auto afterScheme = colon + 1U;
+  if (afterScheme + 2U > target.size() || target.substr(afterScheme, 2U) != "//")
+    return target.substr(afterScheme).find('@') != std::string_view::npos;
+  const auto authorityBegin = afterScheme + 2U;
+  if (authorityBegin > target.size())
     return false;
   auto authority = target.substr(authorityBegin);
   authority = authority.substr(0, authority.find_first_of("/?"));
@@ -172,10 +173,11 @@ std::string ascii(const std::vector<std::byte>& bytes, const std::size_t begin,
   return result;
 }
 
-std::vector<std::size_t> evidence_packets(const ApplicationStream& stream, const std::size_t end) {
+std::vector<std::size_t> evidence_packets(const ApplicationStream& stream, const std::size_t begin,
+                                          const std::size_t end) {
   std::vector<std::size_t> result;
   const auto limit = std::min(end, stream.bytePacketNumbers.size());
-  for (std::size_t index = 0; index < limit; ++index)
+  for (std::size_t index = std::min(begin, limit); index < limit; ++index)
     result.push_back(stream.bytePacketNumbers[index]);
   if (result.empty())
     result = stream.packetNumbers;
@@ -184,16 +186,52 @@ std::vector<std::size_t> evidence_packets(const ApplicationStream& stream, const
   return result;
 }
 
-std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDocument& capture) {
+struct Framing {
+  bool valid = true;
+  bool transferEncoded = false;
+  std::optional<std::size_t> contentLength;
+};
+
+void update_framing(Framing& framing, const std::string_view name, const std::string_view value) {
+  if (name == "transfer-encoding") {
+    framing.transferEncoded = true;
+    return;
+  }
+  if (name != "content-length")
+    return;
+  if (value.empty() || !std::all_of(value.begin(), value.end(), [](const auto character) {
+        return character >= '0' && character <= '9';
+      })) {
+    framing.valid = false;
+    return;
+  }
+  std::size_t parsed = 0;
+  for (const auto character : value) {
+    const auto digit = static_cast<std::size_t>(character - '0');
+    if (parsed > (std::numeric_limits<std::size_t>::max() - digit) / 10U) {
+      framing.valid = false;
+      return;
+    }
+    parsed = parsed * 10U + digit;
+  }
+  if (framing.contentLength && *framing.contentLength != parsed) {
+    framing.valid = false;
+    return;
+  }
+  framing.contentLength = parsed;
+}
+
+std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDocument& capture,
+                                     const std::size_t begin) {
   (void)capture;
-  if (stream.bytes.empty() || stream.ambiguous || stream.truncated)
+  if (begin >= stream.bytes.size() || stream.ambiguous || stream.truncated)
     return std::nullopt;
-  const auto lineEnd = crlf(stream.bytes, 0);
+  const auto lineEnd = crlf(stream.bytes, begin);
   if (!lineEnd)
     return std::nullopt;
-  if (*lineEnd + 2U > kMaxHttpLineBytes)
+  if (*lineEnd - begin + 2U > kMaxHttpLineBytes)
     return std::nullopt;
-  const auto line = ascii(stream.bytes, 0, *lineEnd);
+  const auto line = ascii(stream.bytes, begin, *lineEnd);
   const bool isResponse = line.starts_with("HTTP/1.0 ") || line.starts_with("HTTP/1.1 ");
   const auto firstSpace = line.find(' ');
   const auto secondSpace =
@@ -210,24 +248,25 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
   std::size_t cursor = headerStart;
   std::size_t count = 0;
   std::vector<HttpHeader> headers;
+  Framing framing;
   while (true) {
     const auto next = crlf(stream.bytes, cursor);
     if (!next)
       return std::nullopt;
     if (*next - cursor + 2U > kMaxHttpLineBytes)
       return std::nullopt;
-    if (*next + 2U > kMaxHttpHeaderBytes)
+    if (*next + 2U - begin > kMaxHttpHeaderBytes)
       return std::nullopt;
     if (*next == cursor) {
       const auto headerEnd = cursor + 2U;
-      if (headerEnd > kMaxHttpHeaderBytes)
+      if (headerEnd - begin > kMaxHttpHeaderBytes)
         return std::nullopt;
       Message result;
       result.flowId = stream.flowId;
       result.fromClient = stream.fromClient;
       result.request = isRequest;
       result.end = headerEnd;
-      result.packetNumbers = evidence_packets(stream, headerEnd);
+      result.packetNumbers = evidence_packets(stream, begin, headerEnd);
       result.firstPacket = result.packetNumbers.empty() ? 0U : result.packetNumbers.front();
       result.completionPacket =
           headerEnd <= stream.bytePacketNumbers.size()
@@ -249,12 +288,16 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
           return std::nullopt;
         const auto target = redact_target(targetRaw);
         const auto version = line.substr(secondSpace + 1U);
-        result.requestValue = HttpRequest{method + " " + target + " " + version,
-                                          method,
-                                          target,
-                                          version,
-                                          std::move(headers),
-                                          result.packetNumbers};
+        const auto sanitizedLine = method + " " + target + " " + version;
+        if (sanitizedLine.size() > kMaxHttpLineBytes - 2U)
+          return std::nullopt;
+        result.requestValue = HttpRequest{
+            sanitizedLine, method, target, version, std::move(headers), result.packetNumbers};
+        if (framing.valid && !framing.transferEncoded) {
+          const auto bodyLength = framing.contentLength.value_or(0U);
+          if (bodyLength <= stream.bytes.size() - headerEnd)
+            result.next = headerEnd + bodyLength;
+        }
       } else {
         const auto version = line.substr(0, 8U);
         if (line.size() < 12U)
@@ -275,12 +318,19 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
           return std::nullopt;
         result.responseValue = HttpResponse{
             line, version, statusCode, std::move(reason), std::move(headers), result.packetNumbers};
+        const bool bodyForbidden = statusCode < 200U || statusCode == 204U || statusCode == 304U;
+        if (framing.valid && !framing.transferEncoded &&
+            (bodyForbidden || framing.contentLength.has_value())) {
+          const auto bodyLength = bodyForbidden ? 0U : *framing.contentLength;
+          if (bodyLength <= stream.bytes.size() - headerEnd)
+            result.next = headerEnd + bodyLength;
+        }
       }
       return result;
     }
     if (++count > kMaxHttpHeaderCount)
       return std::nullopt;
-    if (*next + 2U > kMaxHttpHeaderBytes)
+    if (*next + 2U - begin > kMaxHttpHeaderBytes)
       return std::nullopt;
     const auto raw = ascii(stream.bytes, cursor, *next);
     const auto colon = raw.find(':');
@@ -288,9 +338,12 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
         !std::all_of(raw.begin(), raw.begin() + static_cast<std::ptrdiff_t>(colon),
                      [](const auto c) { return token_char(static_cast<unsigned char>(c)); }))
       return std::nullopt;
-    headers.push_back(sanitized_header(raw.substr(0, colon), trim(raw.substr(colon + 1U))));
+    const auto name = lower(raw.substr(0, colon));
+    const auto value = trim(raw.substr(colon + 1U));
+    update_framing(framing, name, value);
+    headers.push_back(sanitized_header(name, value));
     cursor = *next + 2U;
-    if (cursor > kMaxHttpHeaderBytes)
+    if (cursor - begin > kMaxHttpHeaderBytes)
       return std::nullopt;
   }
 }
@@ -321,55 +374,67 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
   std::map<std::size_t, ParsedPacket*> packetMap;
   for (auto& packet : packets)
     packetMap.emplace(packet.packet.number, &packet);
+  bool exchangeLimitReached = false;
   for (const auto& stream : streams) {
-    auto message = parse_message(stream, capture);
-    if (!message) {
-      if (!stream.ambiguous && !stream.truncated && recognized_prefix(stream.bytes))
-        add_diagnostic(capture, {"warning", "HTTP_MALFORMED",
-                                 "Recognized HTTP prefix failed strict HTTP/1.x parsing",
-                                 stream.flowId, std::nullopt,
-                                 stream.packetNumbers.empty()
-                                     ? std::nullopt
-                                     : std::optional<std::size_t>{stream.packetNumbers.front()},
-                                 1U});
-      continue;
+    std::size_t offset = 0;
+    while (offset < stream.bytes.size()) {
+      if (messages.size() >= kMaxHttpExchanges) {
+        add_diagnostic(capture,
+                       {"warning", "HTTP_EXCHANGE_LIMIT",
+                        "HTTP exchanges exceeded the 65536 item limit", stream.flowId, std::nullopt,
+                        stream.packetNumbers.empty()
+                            ? std::nullopt
+                            : std::optional<std::size_t>{stream.packetNumbers.back()},
+                        1U});
+        exchangeLimitReached = true;
+        break;
+      }
+      auto message = parse_message(stream, capture, offset);
+      if (!message) {
+        if (offset == 0U && !stream.ambiguous && !stream.truncated &&
+            recognized_prefix(stream.bytes))
+          add_diagnostic(capture, {"warning", "HTTP_MALFORMED",
+                                   "Recognized HTTP prefix failed strict HTTP/1.x parsing",
+                                   stream.flowId, std::nullopt,
+                                   stream.packetNumbers.empty()
+                                       ? std::nullopt
+                                       : std::optional<std::size_t>{stream.packetNumbers.front()},
+                                   1U});
+        break;
+      }
+      for (const auto number : message->packetNumbers) {
+        const auto found = packetMap.find(number);
+        if (found != packetMap.end() && number == message->completionPacket &&
+            std::none_of(found->second->packet.layers.begin(), found->second->packet.layers.end(),
+                         [](const auto& layer) { return layer.protocol == "HTTP"; }))
+          http_layer(*found->second, *message);
+      }
+      const auto next = message->next;
+      messages.push_back(std::move(*message));
+      if (!next || *next <= offset)
+        break;
+      offset = *next;
     }
-    for (const auto number : message->packetNumbers) {
-      const auto found = packetMap.find(number);
-      if (found != packetMap.end() && number == message->completionPacket)
-        http_layer(*found->second, *message);
-    }
-    messages.push_back(std::move(*message));
+    if (exchangeLimitReached)
+      break;
   }
   std::stable_sort(messages.begin(), messages.end(), [](const auto& left, const auto& right) {
     return left.firstPacket < right.firstPacket;
   });
 
-  std::map<std::string, HttpExchange> pending;
-  std::map<std::string, bool> ambiguousFlows;
+  std::map<std::string, std::deque<HttpExchange>> pending;
   for (const auto& message : messages) {
     if (message.requestValue && message.fromClient) {
-      const auto existing = pending.find(message.flowId);
-      if (existing != pending.end()) {
-        capture.httpExchanges.push_back(std::move(existing->second));
-        pending.erase(existing);
-        ambiguousFlows[message.flowId] = true;
-      }
-      if (ambiguousFlows[message.flowId]) {
-        capture.httpExchanges.push_back({"http-exchange-0", message.flowId, message.requestValue,
+      pending[message.flowId].push_back({"http-exchange-0", message.flowId, message.requestValue,
                                          std::nullopt, std::nullopt, false});
-      } else {
-        pending.emplace(message.flowId,
-                        HttpExchange{"http-exchange-0", message.flowId, message.requestValue,
-                                     std::nullopt, std::nullopt, false});
-      }
       continue;
     }
     if (!message.responseValue || message.fromClient)
       continue;
-    const auto pendingIt = pending.find(message.flowId);
-    if (pendingIt != pending.end() && !ambiguousFlows[message.flowId]) {
-      auto& request = pendingIt->second;
+    auto& requests = pending[message.flowId];
+    if (!requests.empty()) {
+      auto request = std::move(requests.front());
+      requests.pop_front();
       request.response = message.responseValue;
       request.matched = true;
       const auto requestPacket =
@@ -389,14 +454,16 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
           request.latencyNs = std::to_string(end - start);
       }
       capture.httpExchanges.push_back(std::move(request));
-      pending.erase(pendingIt);
     } else {
       capture.httpExchanges.push_back({"http-exchange-0", message.flowId, std::nullopt,
                                        message.responseValue, std::nullopt, false});
     }
   }
-  for (auto& [flowId, request] : pending)
-    capture.httpExchanges.push_back(std::move(request));
+  for (auto& [flowId, requests] : pending)
+    while (!requests.empty()) {
+      capture.httpExchanges.push_back(std::move(requests.front()));
+      requests.pop_front();
+    }
   for (std::size_t index = 0; index < capture.httpExchanges.size(); ++index)
     capture.httpExchanges[index].id = "http-exchange-" + std::to_string(index + 1U);
 }
