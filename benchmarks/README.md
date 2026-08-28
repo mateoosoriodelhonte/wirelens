@@ -62,7 +62,8 @@ WASM linear-memory high-water mark, not process memory.
 The browser spec is opt-in and Chromium-only:
 
 ```sh
-WIRELENS_BENCHMARK=1 pnpm --dir web test:e2e --project=chromium \
+WIRELENS_BENCHMARK=1 WIRELENS_BENCHMARK_OUTPUT=../artifacts/phase-2/benchmark-browser.json \
+  pnpm --dir web test:e2e --project=chromium \
   e2e/phase-2/benchmark-performance.spec.ts
 ```
 

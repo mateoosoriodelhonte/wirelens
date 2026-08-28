@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { buildBenchmarkCapture } from '../../../benchmarks/src/fixtures';
 import {
   validateBenchmarkResult,
@@ -186,6 +188,10 @@ test('records browser and WASM benchmark measurements without timing thresholds'
     wasm: null,
     browser: null,
   });
+  const outputPath = process.env.WIRELENS_BENCHMARK_OUTPUT;
+  const commandPrefix = outputPath
+    ? `WIRELENS_BENCHMARK=1 WIRELENS_BENCHMARK_OUTPUT=${outputPath}`
+    : 'WIRELENS_BENCHMARK=1';
   const browserResult = validateBenchmarkResult({
     schemaVersion: 'wirelens-benchmark/v1',
     metadata: {
@@ -195,7 +201,8 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       runtime: await page.evaluate(() => navigator.userAgent),
       buildType: 'production',
       command:
-        'WIRELENS_BENCHMARK=1 pnpm --dir web test:e2e --project=' +
+        commandPrefix +
+        ' pnpm --dir web test:e2e --project=' +
         testInfo.project.name +
         ' e2e/phase-2/benchmark-performance.spec.ts',
       runCount: RUNS,
@@ -206,4 +213,9 @@ test('records browser and WASM benchmark measurements without timing thresholds'
     body: Buffer.from(`${JSON.stringify(browserResult, null, 2)}\n`),
     contentType: 'application/json',
   });
+  if (outputPath) {
+    const absoluteOutputPath = resolve(outputPath);
+    await mkdir(dirname(absoluteOutputPath), { recursive: true });
+    await writeFile(absoluteOutputPath, `${JSON.stringify(browserResult, null, 2)}\n`);
+  }
 });
