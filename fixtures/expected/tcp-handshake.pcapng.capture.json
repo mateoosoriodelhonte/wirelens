@@ -64,6 +64,7 @@
       "termination": "open-at-capture-end"
     }
   ],
+  "httpExchanges": [],
   "observations": [
     {
       "id": "observation-1",
@@ -738,5 +739,6 @@
       "timestampNs": "1020000000"
     }
   ],
-  "schema": "wirelens.capture"
+  "schema": "wirelens.capture",
+  "tlsHandshakes": []
 }

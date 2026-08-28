@@ -80,6 +80,7 @@
       "termination": "graceful"
     }
   ],
+  "httpExchanges": [],
   "observations": [
     {
       "id": "observation-1",
@@ -1638,5 +1639,6 @@
       "timestampNs": "1060000000"
     }
   ],
-  "schema": "wirelens.capture"
+  "schema": "wirelens.capture",
+  "tlsHandshakes": []
 }

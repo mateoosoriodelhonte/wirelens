@@ -68,6 +68,7 @@
       "termination": "reset"
     }
   ],
+  "httpExchanges": [],
   "observations": [
     {
       "id": "observation-1",
@@ -963,5 +964,6 @@
       "timestampNs": "1030000000"
     }
   ],
-  "schema": "wirelens.capture"
+  "schema": "wirelens.capture",
+  "tlsHandshakes": []
 }

@@ -57,6 +57,7 @@
       "startTimestampNs": "1000000000"
     }
   ],
+  "httpExchanges": [],
   "observations": [],
   "packets": [
     {
@@ -241,5 +242,6 @@
       "timestampNs": "1000000000"
     }
   ],
-  "schema": "wirelens.capture"
+  "schema": "wirelens.capture",
+  "tlsHandshakes": []
 }

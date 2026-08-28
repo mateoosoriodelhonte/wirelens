@@ -122,6 +122,63 @@ struct DnsExchange {
   bool matched = false;
 };
 
+struct HttpHeader {
+  std::string name;
+  std::optional<std::string> value;
+  bool redacted = true;
+};
+
+struct HttpRequest {
+  std::string line;
+  std::string method;
+  std::string target;
+  std::string version;
+  std::vector<HttpHeader> headers;
+  std::vector<std::size_t> packetNumbers;
+};
+
+struct HttpResponse {
+  std::string line;
+  std::string version;
+  std::uint16_t statusCode = 0;
+  std::string reason;
+  std::vector<HttpHeader> headers;
+  std::vector<std::size_t> packetNumbers;
+};
+
+struct HttpExchange {
+  std::string id;
+  std::string flowId;
+  std::optional<HttpRequest> request;
+  std::optional<HttpResponse> response;
+  std::optional<std::string> latencyNs;
+  bool matched = false;
+};
+
+struct TlsClientHello {
+  std::string recordVersion;
+  std::string legacyVersion;
+  std::vector<std::string> offeredVersions;
+  std::optional<std::string> serverName;
+  std::vector<std::size_t> packetNumbers;
+};
+
+struct TlsServerHello {
+  std::string recordVersion;
+  std::string legacyVersion;
+  std::optional<std::string> negotiatedVersion;
+  std::vector<std::size_t> packetNumbers;
+};
+
+struct TlsHandshake {
+  std::string id;
+  std::string flowId;
+  std::optional<TlsClientHello> clientHello;
+  std::optional<TlsServerHello> serverHello;
+  bool matched = false;
+  std::string limitation = "WireLens does not decrypt TLS application data.";
+};
+
 struct Observation {
   std::string id;
   std::string type;
@@ -160,6 +217,8 @@ struct CaptureDocument {
   std::vector<Packet> packets;
   std::vector<Flow> flows;
   std::vector<DnsExchange> dnsExchanges;
+  std::vector<HttpExchange> httpExchanges;
+  std::vector<TlsHandshake> tlsHandshakes;
   std::vector<Observation> observations;
   std::vector<Diagnostic> diagnostics;
   // Private packet byte locations used by the native/WASM byte bridge. This
