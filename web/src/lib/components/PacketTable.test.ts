@@ -30,4 +30,17 @@ describe('PacketTable', () => {
     expect(packet).not.toHaveAttribute('aria-current', 'true');
     expect(screen.getByRole('columnheader', { name: /protocol/i })).toBeInTheDocument();
   });
+
+  it('renders only the filtered packet result set', () => {
+    render(PacketTable, {
+      props: {
+        document: demoDocument,
+        packets: [demoDocument.packets[1]],
+        onSelect: () => undefined,
+      },
+    });
+    expect(screen.getByRole('button', { name: /packet 2/i })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /packet 1/i })).not.toBeInTheDocument();
+    expect(screen.getByText('1', { selector: '.count' })).toBeVisible();
+  });
 });

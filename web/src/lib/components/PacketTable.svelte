@@ -3,10 +3,12 @@
   import { elapsedMilliseconds } from '../time';
   let {
     document,
+    packets = document.packets,
     selectedPacketId = '',
     onSelect,
   }: {
     document: CaptureDocument;
+    packets?: Packet[];
     selectedPacketId?: string;
     onSelect: (id: string) => void;
   } = $props();
@@ -23,7 +25,7 @@
       <p class="eyebrow">Evidence, explained</p>
       <h2 id="packets-title">Packets</h2>
     </div>
-    <span class="count">{document.packets.length}</span>
+    <span class="count">{packets.length}</span>
   </div>
   <div class="table-wrap">
     <table>
@@ -35,7 +37,7 @@
         ></thead
       >
       <tbody
-        >{#each document.packets as packet (packet.id)}<tr
+        >{#each packets as packet (packet.id)}<tr
             ><td
               ><button
                 class:selected={selectedPacketId === packet.id}
