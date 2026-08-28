@@ -287,11 +287,16 @@
         "matched": { "type": "boolean" }
       }
     },
+    "safeApplicationPropertyName": {
+      "not": {
+        "enum": ["body", "payload", "rawBytes", "rawValue", "rawExtensions", "keyMaterial"]
+      }
+    },
     "httpHeader": {
       "oneOf": [
         {
           "type": "object",
-          "additionalProperties": false,
+          "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
           "required": ["name", "value", "redacted"],
           "properties": {
             "name": {
@@ -311,7 +316,7 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
+          "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
           "required": ["name", "value", "redacted"],
           "properties": {
             "name": {
@@ -328,7 +333,7 @@
     },
     "httpRequest": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": ["line", "method", "target", "version", "headers", "packetNumbers"],
       "properties": {
         "line": { "type": "string", "minLength": 1, "maxLength": 8192 },
@@ -355,7 +360,7 @@
     },
     "httpResponse": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": ["line", "version", "statusCode", "reason", "headers", "packetNumbers"],
       "properties": {
         "line": { "type": "string", "minLength": 1, "maxLength": 8192 },
@@ -377,7 +382,7 @@
     },
     "httpExchange": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": ["id", "flowId", "request", "response", "latencyNs", "matched"],
       "properties": {
         "id": { "type": "string", "pattern": "^http-exchange-[1-9][0-9]*$" },
@@ -391,7 +396,7 @@
     "tlsVersion": { "type": "string", "minLength": 1, "maxLength": 32 },
     "tlsClientHello": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": [
         "recordVersion",
         "legacyVersion",
@@ -428,7 +433,7 @@
     },
     "tlsServerHello": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": ["recordVersion", "legacyVersion", "negotiatedVersion", "packetNumbers"],
       "properties": {
         "recordVersion": { "$ref": "#/$defs/tlsVersion" },
@@ -446,7 +451,7 @@
     },
     "tlsHandshake": {
       "type": "object",
-      "additionalProperties": false,
+      "propertyNames": { "$ref": "#/$defs/safeApplicationPropertyName" },
       "required": ["id", "flowId", "clientHello", "serverHello", "matched", "limitation"],
       "properties": {
         "id": { "type": "string", "pattern": "^tls-handshake-[1-9][0-9]*$" },

@@ -180,7 +180,49 @@ describe('validateCaptureDocument', () => {
     expect(validateCaptureDocument(value)).toEqual(value);
 
     value.tlsHandshakes[0].clientHello.rawExtensions = 'must-not-enter-the-contract';
-    expect(() => validateCaptureDocument(value)).toThrow(/rawExtensions|additional/);
+    expect(() => validateCaptureDocument(value)).toThrow(/property name|rawExtensions/);
+  });
+
+  it('permits unknown optional fields inside HTTP and TLS entities', () => {
+    const value = minimal() as Record<string, any>;
+    value.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: {
+          line: 'GET / HTTP/1.1',
+          method: 'GET',
+          target: '/',
+          version: 'HTTP/1.1',
+          headers: [{ name: 'host', value: 'example.test', redacted: false, futureHeader: true }],
+          packetNumbers: [1],
+          futureRequest: true,
+        },
+        response: null,
+        latencyNs: null,
+        matched: false,
+        futureExchange: true,
+      },
+    ];
+    value.tlsHandshakes = [
+      {
+        id: 'tls-handshake-1',
+        flowId: 'tcp-flow-1',
+        clientHello: {
+          recordVersion: 'TLS 1.2',
+          legacyVersion: 'TLS 1.2',
+          offeredVersions: ['TLS 1.3'],
+          serverName: null,
+          packetNumbers: [2],
+          futureHello: true,
+        },
+        serverHello: null,
+        matched: false,
+        limitation: 'WireLens does not decrypt TLS application data.',
+        futureHandshake: true,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
   });
 
   it('accepts TCP lifecycle state and the four neutral TCP observation types', () => {

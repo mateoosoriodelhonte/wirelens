@@ -190,6 +190,7 @@ export interface HttpHeader {
   name: string;
   value: string | null;
   redacted: boolean;
+  [key: string]: unknown;
 }
 
 export interface HttpRequest {
@@ -199,6 +200,7 @@ export interface HttpRequest {
   version: 'HTTP/1.0' | 'HTTP/1.1';
   headers: HttpHeader[];
   packetNumbers: number[];
+  [key: string]: unknown;
 }
 
 export interface HttpResponse {
@@ -208,6 +210,7 @@ export interface HttpResponse {
   reason: string;
   headers: HttpHeader[];
   packetNumbers: number[];
+  [key: string]: unknown;
 }
 
 export interface HttpExchange {
@@ -217,6 +220,7 @@ export interface HttpExchange {
   response: HttpResponse | null;
   latencyNs: DecimalString | null;
   matched: boolean;
+  [key: string]: unknown;
 }
 
 export interface TlsClientHello {
@@ -225,6 +229,7 @@ export interface TlsClientHello {
   offeredVersions: string[];
   serverName: string | null;
   packetNumbers: number[];
+  [key: string]: unknown;
 }
 
 export interface TlsServerHello {
@@ -232,6 +237,7 @@ export interface TlsServerHello {
   legacyVersion: string;
   negotiatedVersion: string | null;
   packetNumbers: number[];
+  [key: string]: unknown;
 }
 
 export interface TlsHandshake {
@@ -241,6 +247,7 @@ export interface TlsHandshake {
   serverHello: TlsServerHello | null;
   matched: boolean;
   limitation: string;
+  [key: string]: unknown;
 }
 
 export interface Observation {
