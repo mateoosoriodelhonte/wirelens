@@ -18,6 +18,7 @@ test('starts in the local-only empty state', async ({ page }) => {
     page.getByRole('heading', { name: 'Inspect a capture on this device' }),
   ).toBeVisible();
   await expect(page.getByLabel('Capture file')).toBeVisible();
+  await expect(page.getByLabel('Capture file')).toBeEnabled();
   await expect(
     page.getByText('No capture selected. Files stay on this device.', { exact: true }),
   ).toBeVisible();

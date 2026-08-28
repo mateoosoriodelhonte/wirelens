@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { httpFixturePath, tlsFixturePath } from '../fixtures';
+import { httpFixturePath, readyCaptureInput, tlsFixturePath } from '../fixtures';
 
 test('shows sanitized HTTP and bounded TLS handshake evidence', async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
@@ -22,7 +22,7 @@ test('shows sanitized HTTP and bounded TLS handshake evidence', async ({ page },
   });
 
   await page.goto('/');
-  const input = page.getByLabel('Capture file');
+  const input = await readyCaptureInput(page);
   await input.setInputFiles(httpFixturePath);
 
   const http = page.getByRole('region', { name: 'HTTP exchanges' });

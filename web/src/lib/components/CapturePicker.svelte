@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   let {
     onFile,
     captureStatus = 'empty',
@@ -9,6 +11,10 @@
   let status = $state('No capture selected. Files stay on this device.');
   let error = $state('');
   let isDragging = $state(false);
+  let isInteractive = $state(false);
+  onMount(() => {
+    isInteractive = true;
+  });
   const visibleStatus = $derived(
     captureStatus === 'loading'
       ? 'Reading the selected capture locally…'
@@ -62,6 +68,7 @@
     <input
       aria-label="Capture file"
       type="file"
+      disabled={!isInteractive}
       accept=".pcap,.pcapng,application/vnd.tcpdump.pcap,application/vnd.tcpdump.pcapng"
       onchange={handleChange}
     />

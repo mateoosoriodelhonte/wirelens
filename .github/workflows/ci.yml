@@ -14,10 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  phase-1:
-    name: Phase 1 verification
+  phase-2:
+    name: Phase 2 verification
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -65,17 +65,22 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --dir web exec playwright install chromium firefox
 
-      - name: Run the fail-fast Phase 1 gate
+      - name: Run the fail-fast Phase 2 gate
         env:
           WIRELENS_REQUIRE_E2E: '1'
-        run: pnpm verify:phase1
+        run: pnpm verify:phase2
 
-      - name: Upload Playwright artifacts on failure
+      - name: Upload Phase 2 diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          name: phase-2-diagnostics
           path: |
             web/playwright-report/
             web/test-results/
+            build/native-debug/Testing/
+            build/native-sanitize/Testing/
+            build/wasm/
+            artifacts/phase-2/
+            benchmarks/results/
           if-no-files-found: ignore

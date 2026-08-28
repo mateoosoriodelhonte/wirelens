@@ -1,0 +1,6 @@
+add_executable(wirelens_benchmark_native native_runner.cpp)
+target_link_libraries(wirelens_benchmark_native PRIVATE wirelens_core)
+target_compile_features(wirelens_benchmark_native PRIVATE cxx_std_20)
+if(WIRELENS_WARNINGS_AS_ERRORS)
+  target_compile_options(wirelens_benchmark_native PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()

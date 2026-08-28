@@ -2,17 +2,17 @@
 
 ## Scope
 
-WireLens Phase 1 is a local-only file inspector. It accepts a user-selected
+WireLens is a local-only file inspector. It accepts a user-selected
 capture file in the browser and parses it in a Web Worker. It does not capture
 from an interface, send or replay packets, upload files, call a backend, use
 telemetry, or store capture data in browser persistence.
 
 The parser treats capture bytes as hostile. It uses bounded reads, a 64 MiB
 input cap, and a 65,536-packet cap. Limit failures are typed parse results. The
-normalized JSON contract excludes raw packet bytes. HTTP and future exports
-must keep sensitive header values out of the model. A local-only design reduces
-exposure, but it does not protect a compromised device or a malicious local
-browser extension.
+normalized JSON contract excludes raw packet bytes. HTTP parsing keeps bodies,
+query values, and secret-bearing header values out of the model. A local-only
+design reduces exposure, but it does not protect a compromised device or a
+malicious local browser extension.
 
 ## Reporting
 

@@ -41,7 +41,7 @@ describe('validateCaptureDocument', () => {
     ).toThrow(/contractVersion/);
   });
 
-  it('accepts the minimal Phase 1 document', () => {
+  it('accepts the minimal version 2 document', () => {
     const value = minimal();
     expect(validateCaptureDocument(value)).toEqual(value);
   });

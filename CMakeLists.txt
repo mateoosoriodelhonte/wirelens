@@ -32,3 +32,7 @@ endif()
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/wasm/CMakeLists.txt")
   add_subdirectory(wasm)
 endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/CMakeLists.txt")
+  add_subdirectory(benchmarks)
+endif()

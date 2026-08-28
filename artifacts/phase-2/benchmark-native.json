@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "wirelens-benchmark/v1",
+  "metadata": {
+    "hardware": "Apple M4 Pro; 14 logical CPUs; 64 GiB RAM; arm64",
+    "os": "darwin 25.5.0",
+    "browser": null,
+    "runtime": "node v26.7.0",
+    "buildType": "Release",
+    "command": "WIRELENS_BENCHMARK_RUNS=10 WIRELENS_BENCHMARK_WARMUP=2 WIRELENS_BENCHMARK_BUILD_TYPE=Release pnpm --dir benchmarks run-native -- ../build/native-release/benchmarks/wirelens_benchmark_native ../artifacts/phase-2/benchmark-native.json",
+    "runCount": 10
+  },
+  "fixtures": [
+    {
+      "profile": "small",
+      "bytes": 234,
+      "packetCount": 3,
+      "native": {
+        "parseMs": {
+          "samples": [
+            0.006666, 0.004875, 0.007625, 0.004667, 0.005292, 0.006542, 0.004417, 0.005958,
+            0.005625, 0.004541
+          ],
+          "median": 0.0054585
+        },
+        "jsonSerializationMs": {
+          "samples": [
+            0.129375, 0.127583, 0.125458, 0.12575, 0.125083, 0.124708, 0.12725, 0.128458, 0.133458,
+            0.12975
+          ],
+          "median": 0.1274165
+        },
+        "peakMemoryBytes": {
+          "samples": [
+            2129920, 2146304, 2211840, 2228224, 2244608, 2277376, 2293760, 2326528, 2441216, 2457600
+          ],
+          "median": 2260992,
+          "supported": true
+        }
+      },
+      "wasm": null,
+      "browser": null
+    },
+    {
+      "profile": "medium",
+      "bytes": 71704,
+      "packetCount": 1024,
+      "native": {
+        "parseMs": {
+          "samples": [
+            1.096125, 1.022291, 1.075334, 1.009125, 1.018416, 1, 1.087875, 1.07275, 1.052166,
+            1.068875
+          ],
+          "median": 1.0605205
+        },
+        "jsonSerializationMs": {
+          "samples": [
+            36.529958, 35.448542, 36.140125, 34.335792, 33.454583, 34.3925, 34.612833, 34.907458,
+            34.184917, 35.254417
+          ],
+          "median": 34.7601455
+        },
+        "peakMemoryBytes": {
+          "samples": [
+            36143104, 36143104, 36225024, 36257792, 36257792, 36257792, 36405248, 36438016,
+            36601856, 36601856
+          ],
+          "median": 36257792,
+          "supported": true
+        }
+      },
+      "wasm": null,
+      "browser": null
+    },
+    {
+      "profile": "limit-near",
+      "bytes": 1966074,
+      "packetCount": 65535,
+      "native": {
+        "parseMs": {
+          "samples": [
+            33.954333, 36.776833, 36.702792, 33.617708, 38.726959, 35.519417, 34.812667, 33.322167,
+            34.041875, 34.672084
+          ],
+          "median": 34.742375499999994
+        },
+        "jsonSerializationMs": {
+          "samples": [
+            599.993792, 599.445667, 579.265209, 584.828834, 587.442916, 591.800917, 577.99025,
+            593.942333, 582.991708, 594.990542
+          ],
+          "median": 589.6219165
+        },
+        "peakMemoryBytes": {
+          "samples": [
+            554549248, 557219840, 560660480, 560726016, 560726016, 560742400, 560775168, 560791552,
+            560939008, 560939008
+          ],
+          "median": 560734208,
+          "supported": true
+        }
+      },
+      "wasm": null,
+      "browser": null
+    }
+  ]
+}

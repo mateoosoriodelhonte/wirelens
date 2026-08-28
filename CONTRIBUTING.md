@@ -2,7 +2,7 @@
 
 ## Before you change code
 
-Read the accepted design and Phase 1 plan in `docs/superpowers/`. Keep the
+Read the accepted design and current plan in `docs/superpowers/`. Keep the
 local-first boundary intact. Do not add live capture, packet transmission,
 replay, scanning, probing, decryption, a backend, telemetry, analytics, or
 capture upload without a new approved design.
@@ -26,14 +26,13 @@ The privacy, secret, and bootstrap checks also require `rg` from ripgrep.
 Run the complete gate before review:
 
 ```sh
-pnpm verify:phase1
+pnpm verify:phase2
 ```
 
-The gate rebuilds the deterministic fixture, native targets, WebAssembly, and
+The gate rebuilds deterministic fixtures, native targets, WebAssembly, and
 static output. It runs native tests, package tests, native/WebAssembly/golden
 contract parity, TypeScript checks, lint, formatting, privacy and secret scans,
-and a high-severity dependency audit. Playwright is marked `NOT_RUN` when Task
-10's dependency and test are not present.
+and a high-severity dependency audit. Chromium and Firefox are required in CI.
 
 If a required tool is missing, report the exact command and state. Do not hide a
 failed or skipped check. Do not commit build output, `.tools`, test reports,
