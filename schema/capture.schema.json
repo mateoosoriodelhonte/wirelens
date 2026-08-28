@@ -360,7 +360,7 @@
       "properties": {
         "line": { "type": "string", "minLength": 1, "maxLength": 8192 },
         "version": { "enum": ["HTTP/1.0", "HTTP/1.1"] },
-        "statusCode": { "type": "integer", "minimum": 100, "maximum": 999 },
+        "statusCode": { "type": "integer", "minimum": 100, "maximum": 599 },
         "reason": { "type": "string", "maxLength": 256 },
         "headers": {
           "type": "array",

@@ -129,6 +129,31 @@ describe('validateCaptureDocument', () => {
     expect(() => validateCaptureDocument(value)).toThrow(/value|redacted/);
   });
 
+  it('accepts the HTTP status boundary and rejects the next value', () => {
+    const value = minimal() as Record<string, any>;
+    value.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: null,
+        response: {
+          line: 'HTTP/1.1 599 Boundary',
+          version: 'HTTP/1.1',
+          statusCode: 599,
+          reason: 'Boundary',
+          headers: [],
+          packetNumbers: [1],
+        },
+        latencyNs: null,
+        matched: false,
+      },
+    ];
+    expect(validateCaptureDocument(value)).toEqual(value);
+
+    value.httpExchanges[0].response.statusCode = 600;
+    expect(() => validateCaptureDocument(value)).toThrow(/statusCode|599/);
+  });
+
   it('accepts bounded TLS hello metadata and rejects raw extension fields', () => {
     const value = minimal() as Record<string, any>;
     value.tlsHandshakes = [
