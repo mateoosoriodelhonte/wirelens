@@ -141,10 +141,10 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       const overviewEnd = await page.evaluate(() => performance.now());
       firstOverview.push(overviewEnd - start);
       const filterStart = await page.evaluate(() => performance.now());
-      await page.getByLabel('Packet filter').fill('tcp');
+      await page.getByLabel('Packet filter').fill('udp');
       await expect(
-        page.getByText(new RegExp(`Showing all ${profile.packetCount} packets\\.`)),
-      ).toBeVisible();
+        page.getByRole('region', { name: 'Filter and search' }).getByRole('status'),
+      ).toHaveText('No packets match the current filter and search.');
       filterLatency.push((await page.evaluate(() => performance.now())) - filterStart);
       const measurement = await measureWasmInPage(page, capture.bytes);
       wasm.moduleStartupMs.push(measurement.moduleStartupMs);
