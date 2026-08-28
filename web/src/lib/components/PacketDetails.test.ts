@@ -61,4 +61,29 @@ describe('PacketDetails', () => {
     expect(screen.getByText(/stopped the TCP connection/i)).toBeInTheDocument();
     expect(screen.queryByText(/completes the handshake/i)).not.toBeInTheDocument();
   });
+
+  it('shows reviewed learning text for every displayed protocol layer', () => {
+    const packet: Packet = {
+      ...structuredClone(demoDocument.packets[0]),
+      layers: [
+        {
+          protocol: 'UDP',
+          label: 'UDP',
+          fields: [],
+          byteRange: null,
+          explanationKey: null,
+        },
+        {
+          protocol: 'DNS',
+          label: 'DNS query',
+          fields: [],
+          byteRange: null,
+          explanationKey: 'dns',
+        },
+      ],
+    };
+    render(PacketDetails, { props: { packet, learningMode: true } });
+    expect(screen.getByText(/UDP carries one datagram/i)).toBeVisible();
+    expect(screen.getByText(/DNS maps names and network addresses/i)).toBeVisible();
+  });
 });

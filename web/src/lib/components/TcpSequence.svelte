@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tcpEventLearningText } from '../learning';
   import type { CaptureDocument, TcpFlow, TcpFlowEvent } from '../model';
   import { elapsedMilliseconds } from '../time';
   let { document, flow }: { document: CaptureDocument; flow: TcpFlow } = $props();
@@ -18,16 +19,6 @@
       'open-at-capture-end': 'Open at capture end',
       unknown: 'Close state unknown',
     })[value];
-  const explanation = (label: string) =>
-    ({
-      SYN: 'The client asks to start a TCP connection.',
-      'SYN + ACK': 'The server accepts and acknowledges the client request.',
-      ACK: 'The client acknowledges the server. The handshake is complete.',
-      FIN: 'One endpoint asks to close the TCP connection.',
-      'FIN + ACK': 'One endpoint acknowledges traffic and asks to close the connection.',
-      RST: 'One endpoint stops the TCP connection immediately.',
-      DATA: 'This packet carries TCP payload bytes.',
-    })[label] ?? 'This packet carries TCP connection evidence.';
 </script>
 
 <section class="sequence" aria-labelledby="sequence-title">
@@ -79,7 +70,7 @@
     ><tbody
       >{#each flow.events as event (event.packetNumber)}<tr
           ><th scope="row">{event.packetNumber}</th><td
-            ><strong>{event.label}</strong><br /><span>{explanation(event.label)}</span></td
+            ><strong>{event.label}</strong><br /><span>{tcpEventLearningText(event.label)}</span></td
           ><td>{direction(event) === 'client-to-server' ? 'Client → server' : 'Server → client'}</td
           ><td>{elapsed(event)}</td></tr
         >{/each}</tbody

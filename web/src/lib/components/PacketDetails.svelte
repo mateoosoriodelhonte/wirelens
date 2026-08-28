@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { learningTextFor } from '../learning';
   import type { Packet } from '../model';
   let { packet, learningMode = false }: { packet: Packet; learningMode?: boolean } = $props();
   const tcpLayer = $derived(packet.layers.find((layer) => layer.protocol === 'TCP'));
@@ -9,22 +10,19 @@
       packet.layers.at(-1)?.protocol ??
       'UNKNOWN',
   );
-  const explanation = (key: string | null, value: string | undefined) => {
-    const fallback = value?.toUpperCase();
-    return key === 'tcp.syn' || (key === null && fallback === 'SYN')
-      ? 'Synchronize sequence numbers to begin a connection.'
-      : key === 'tcp.syn-ack' || (key === null && fallback === 'SYN + ACK')
-        ? 'The server accepts and acknowledges the client request.'
-        : key === 'tcp.rst' || (key === null && fallback?.includes('RST'))
-          ? 'This endpoint stopped the TCP connection.'
-          : key === 'tcp.fin' || (key === null && fallback?.includes('FIN'))
-            ? 'This endpoint asked to close the TCP connection.'
-            : key === 'tcp.data'
-              ? 'This packet carries TCP payload bytes.'
-              : key === 'tcp.ack' || (key === null && fallback === 'ACK')
-                ? 'This packet acknowledges TCP sequence data.'
-                : 'This field describes evidence in the selected protocol layer.';
+  const tcpFallbackKey = (value: string | undefined) => {
+    const flags = value?.toUpperCase();
+    if (flags === 'SYN') return 'tcp.syn';
+    if (flags === 'SYN + ACK') return 'tcp.syn-ack';
+    if (flags?.includes('RST')) return 'tcp.rst';
+    if (flags?.includes('FIN')) return 'tcp.fin';
+    if (flags === 'ACK') return 'tcp.ack';
+    return null;
   };
+  const explanationKey = (protocol: string, layerKey: string | null) =>
+    protocol === 'TCP'
+      ? (tcpFlags?.explanationKey ?? tcpFallbackKey(tcpFlags?.value) ?? layerKey)
+      : layerKey;
 </script>
 
 <section class="details" aria-labelledby="details-title">
@@ -46,9 +44,9 @@
               <dd>{field.value}</dd>
             </div>{/each}
         </dl>
-        {#if learningMode && layer.protocol === 'TCP'}<p class="learning">
+        {#if learningMode}<p class="learning">
             <strong>What this means:</strong>
-            {explanation(tcpFlags?.explanationKey ?? layer.explanationKey, tcpFlags?.value)}
+            {learningTextFor(layer.protocol, explanationKey(layer.protocol, layer.explanationKey))}
           </p>{/if}
       </article>{/each}
   </div>
