@@ -2,7 +2,7 @@
 
 ## Evidence boundary
 
-- Measurement source HEAD: `e1d43c9cce8a5274d7977eea10c707f14e6a3dd7`
+- Measurement source HEAD: `91dba42f9a59e275ad70e4f06a49565f63689915`
 - Authority: approved V1 design, Phase 2 plan, parent issue #30, and issue #31
 - Host: Mac mini, Apple M4 Pro, 14 cores, 64 GiB RAM, arm64
 - Operating system: macOS 26.5.2 build 25F84, Darwin 25.5.0
@@ -55,15 +55,15 @@ recommendation to render 65,535 packet rows.
 
 ## Browser result
 
-| Metric                             |     Small |     Medium |
-| ---------------------------------- | --------: | ---------: |
-| Direct WASM module startup         |  2.700 ms |   2.700 ms |
-| WASM parse plus serialization      |  0.300 ms |  32.200 ms |
-| Heap decode plus `JSON.parse`      |  0.100 ms |   6.100 ms |
-| Echo-worker startup handshake      |  2.800 ms |   3.200 ms |
-| Warm structured-clone round trip   |  0.100 ms |  14.700 ms |
-| File selection to visible overview | 96.300 ms | 241.500 ms |
-| Filter interaction                 | 10.700 ms |  46.400 ms |
+| Metric                             |     Small |     Medium |    Limit-near |
+| ---------------------------------- | --------: | ---------: | ------------: |
+| Direct WASM module startup         |  2.900 ms |   3.100 ms |     33.000 ms |
+| WASM parse plus serialization      |  0.200 ms |  32.100 ms |    553.400 ms |
+| Heap decode plus `JSON.parse`      |  0.100 ms |   5.900 ms |    132.200 ms |
+| Echo-worker startup handshake      |  2.800 ms |   3.000 ms |      3.200 ms |
+| Warm structured-clone round trip   |  0.100 ms |  14.800 ms |    245.800 ms |
+| File selection to visible overview | 95.900 ms | 242.400 ms | 10,827.800 ms |
+| Filter interaction                 | 10.700 ms |  46.400 ms |  4,132.300 ms |
 
 The worker metric is a full echo round trip after a startup handshake. It is a
 conservative transport measure because the production result crosses from the
@@ -71,16 +71,16 @@ worker to the main thread once. The first-overview measurement uses the real
 production Web Worker, WebAssembly module, validator, store, and Svelte view.
 
 Browser process peak memory is `NOT_RUN`. Chromium exposes a point-in-time
-estimate, not a reliable peak sampler. The limit-near browser profile is also
-`NOT_RUN`; passing that fixture through Playwright and rendering 65,535 rows
-would measure test-driver and DOM cost more than the approved parser transport.
-Native and Node WebAssembly still prove that boundary.
+estimate, not a reliable peak sampler. The limit-near browser profile includes
+the real production worker, validation, 65,535-row render, completed filter,
+and a separate direct WASM/worker path. Its overview and filter values include
+large DOM costs. They are boundary evidence, not normal-use guidance.
 
 ## Transport decision
 
-The medium browser run spent 6.1 ms on heap decode and `JSON.parse` and 14.7 ms
-on a warm structured-clone round trip. The combined 20.8 ms is 8.6% of the
-241.5 ms first-overview median. It is also below the 100 ms review trigger.
+The medium browser run spent 5.9 ms on heap decode and `JSON.parse` and 14.8 ms
+on a warm structured-clone round trip. The combined 20.7 ms is 8.5% of the
+242.4 ms first-overview median. It is also below the 100 ms review trigger.
 
 No review trigger in Decision 0001 was crossed. WireLens keeps the normal Web
 Worker and the versioned normalized JSON contract. A binary or streaming
@@ -106,7 +106,7 @@ Expected integrated totals at the measurement source are:
 - native CTest: 94;
 - sanitizer CTest: 94;
 - package tests: 171 (16 benchmark, 12 fixture, 22 schema, 121 web);
-- functional Playwright: 12 (6 Chromium and 6 Firefox);
+- functional Playwright: 14 (7 Chromium and 7 Firefox);
 - opt-in Chromium benchmark: 1.
 
 The final issue and pull request evidence must mark each gate `PASS`, `FAIL`,
@@ -119,7 +119,7 @@ configured high-severity failure threshold.
 | -------------------------------------------------- | ------------------------------------------------------------------ |
 | `artifacts/phase-2/benchmark-native.json`          | `0380a393da981fd92670f2bda1e0d438cc4e59ab8d8883b7249595ee72203356` |
 | `artifacts/phase-2/benchmark-wasm.json`            | `c959742d26c2b94043303841d1d0446f325205d74aeea31120443f976381409b` |
-| `artifacts/phase-2/benchmark-browser.json`         | `d0a2dbc535b4fc67698f25da5cc67d7535ce11a8153e79b0f46394928346ec90` |
+| `artifacts/phase-2/benchmark-browser.json`         | `95d27d4baa9859d15b0580a9e1b4d140768ab526ca0dde3cf2bec55a0a4a2b8b` |
 | `artifacts/phase-2/dns-exchanges.png`              | `ecd0a2d4c49e4a7cf984fc8bb749174d51c9d8303ea6e5b3dab712c574e18894` |
 | `artifacts/phase-2/inspection-tools-highlight.png` | `7fad989ba0992402ecfe3076f95de7a1e4f7142b0b05c98f2ab1b22776244744` |
 | `artifacts/phase-2/inspection-tools-evidence.png`  | `bd98fcde8d7a2363417bc926653f9f5191ac041c401a7a54140936896fbd9977` |
@@ -130,8 +130,12 @@ configured high-severity failure threshold.
   typed failure; the limit-near benchmark produced 99,694,542 JSON bytes, and
   its artifact records a 534.76 MiB median native process peak;
 - improve large-capture presentation without changing parser safety limits;
-- add more bounded protocol detail only through the versioned contract;
-- complete accessibility and usability polish with real-browser tests;
+- complete endpoint/protocol distribution, capture timeline, and latency views;
+- add sanitized Markdown/JSON export and optional stable-label anonymization;
+- complete accessibility and usability work with real-browser tests;
+- add adversarial corpus tests, fuzzing, and available static analysis;
+- verify the static GitHub Pages build with the synthetic browser path, then
+  complete the separately authorized `v1.0.0` release work;
 - revisit transport only if later reproducible evidence crosses Decision 0001.
 
 Deployment, a tag, and a release are outside Phase 2.

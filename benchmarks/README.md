@@ -50,12 +50,12 @@ WIRELENS_BENCHMARK_RUNS=10 WIRELENS_BENCHMARK_WARMUP=2 \
 `web/e2e/phase-2/benchmark-performance.spec.ts` measures module startup,
 WASM parse-plus-serialization, heap-to-JavaScript decode and `JSON.parse`, an
 echo-worker startup handshake, a warm structured-clone round trip, production
-file-to-overview time, and filter latency. It runs only the small and medium
-profiles in a browser. The
-limit-near record is present with browser/WASM values unset, because passing a
-multi-megabyte array through Playwright and rendering 65,535 rows would not be
-a reliable browser measurement. Browser memory remains explicitly unsupported
-because the available API is a point-in-time snapshot, not a peak sampler.
+file-to-overview time, and filter latency. It runs all three profiles. The
+limit-near path renders 65,535 rows and then removes them with a completed
+filter. This is intentionally resource-intensive, opt-in evidence about the
+approved safety boundary. It is not normal CI work or UI guidance. Browser
+memory remains explicitly unsupported because the available API is a
+point-in-time snapshot, not a peak sampler.
 The Node WASM runner also records `wasmLinearMemoryPeakBytes`: the
 post-parse `HEAPU8.byteLength` from a fresh module for each run. This is a
 WASM linear-memory high-water mark, not process memory.
