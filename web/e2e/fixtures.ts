@@ -10,6 +10,13 @@ export const handshakeFixturePath = resolve(
 
 export const dnsFixturePath = resolve(e2eDirectory, '../../fixtures/generated/dns-exchanges.pcap');
 
+export const httpFixturePath = resolve(
+  e2eDirectory,
+  '../../fixtures/generated/plaintext-http.pcap',
+);
+
+export const tlsFixturePath = resolve(e2eDirectory, '../../fixtures/generated/tls-handshake.pcap');
+
 export const tcpResetFixturePath = resolve(e2eDirectory, '../../fixtures/generated/tcp-reset.pcap');
 
 export const tcpRetransmissionFixturePath = resolve(
