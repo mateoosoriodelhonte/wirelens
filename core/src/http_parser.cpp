@@ -319,7 +319,7 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
         result.responseValue = HttpResponse{
             line, version, statusCode, std::move(reason), std::move(headers), result.packetNumbers};
         const bool bodyForbidden = statusCode < 200U || statusCode == 204U || statusCode == 304U;
-        if (framing.valid && !framing.transferEncoded &&
+        if (statusCode != 101U && framing.valid && !framing.transferEncoded &&
             (bodyForbidden || framing.contentLength.has_value())) {
           const auto bodyLength = bodyForbidden ? 0U : *framing.contentLength;
           if (bodyLength <= stream.bytes.size() - headerEnd)
@@ -430,6 +430,9 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
       continue;
     }
     if (!message.responseValue || message.fromClient)
+      continue;
+    const auto statusCode = message.responseValue->statusCode;
+    if (statusCode >= 100U && statusCode < 200U && statusCode != 101U)
       continue;
     auto& requests = pending[message.flowId];
     if (!requests.empty()) {

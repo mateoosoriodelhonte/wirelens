@@ -302,6 +302,34 @@ TEST_CASE("HTTP parses multiple safely framed exchanges on one persistent flow")
   REQUIRE(wirelens::serialize_capture(capture).find(body) == std::string::npos);
 }
 
+TEST_CASE("HTTP keeps a request pending across informational responses") {
+  const auto request =
+      wirelens_test::byte_payload("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n");
+  const auto responses = wirelens_test::byte_payload(
+      "HTTP/1.1 100 Continue\r\n\r\n"
+      "HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload\r\n\r\n"
+      "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+  const auto capture = parse({{true, 1000, 0, 0x10, request, {}, {}, 0, false, 40000, 8443},
+                              {false, 2000, 0, 0x10, responses, {}, {}, 10, false, 40000, 8443}});
+  REQUIRE(capture.httpExchanges.size() == 1U);
+  REQUIRE(capture.httpExchanges.front().matched);
+  REQUIRE(capture.httpExchanges.front().request->target == "/");
+  REQUIRE(capture.httpExchanges.front().response->statusCode == 200U);
+}
+
+TEST_CASE("HTTP stops parsing after a switching-protocols response") {
+  const auto request =
+      wirelens_test::byte_payload("GET /upgrade HTTP/1.1\r\nHost: example.test\r\n\r\n");
+  const auto responses = wirelens_test::byte_payload(
+      "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: test\r\n\r\n"
+      "HTTP/1.1 200 Tunnel Bytes\r\nContent-Length: 0\r\n\r\n");
+  const auto capture = parse({{true, 1000, 0, 0x10, request, {}, {}, 0, false, 40000, 8443},
+                              {false, 2000, 0, 0x10, responses, {}, {}, 10, false, 40000, 8443}});
+  REQUIRE(capture.httpExchanges.size() == 1U);
+  REQUIRE(capture.httpExchanges.front().matched);
+  REQUIRE(capture.httpExchanges.front().response->statusCode == 101U);
+}
+
 TEST_CASE("HTTP does not parse header-like bytes from an unframed response body") {
   const auto capture = parse_http_stream(
       wirelens_test::byte_payload(
