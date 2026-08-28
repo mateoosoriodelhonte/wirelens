@@ -7,7 +7,7 @@ package="$repo_root/package.json"
 workflow="$repo_root/.github/workflows/ci.yml"
 
 test -x "$gate"
-rg -F 'set -Eeuo pipefail' "$gate"
+rg -Fq 'set -Eeuo pipefail' "$gate"
 
 # Keep this list explicit. A Phase 2 gate must not silently lose a required lane.
 for step in \
@@ -15,6 +15,8 @@ for step in \
   'Check toolchain bootstrap isolation' \
   'Build deterministic synthetic fixtures' \
   'Check fixture tests and manifests' \
+  'Generate deterministic benchmark captures' \
+  'Check benchmark determinism and result schema' \
   'Configure native debug build' \
   'Build native targets' \
   'Run native tests' \
@@ -35,13 +37,15 @@ for step in \
   'Privacy scan' \
   'Secret scan' \
   'Dependency audit (high severity)'; do
-  rg -F "$step" "$gate"
+  rg -Fq "$step" "$gate"
 done
 
 for command in \
   'scripts/tests/bootstrap-local-toolchain.test.sh' \
   'pnpm --dir fixtures build' \
   'pnpm --dir fixtures test' \
+  'pnpm --dir benchmarks generate' \
+  'pnpm --dir benchmarks test' \
   '--preset native-debug' \
   'build/native-debug' \
   'build/native-sanitize' \
@@ -61,7 +65,7 @@ for command in \
   'bash scripts/check-privacy.sh' \
   'bash scripts/check-secrets.sh' \
   'pnpm audit --audit-level high'; do
-  rg -F -- "$command" "$gate"
+  rg -Fq -- "$command" "$gate"
 done
 
 node --input-type=module - "$package" <<'NODE'
@@ -73,8 +77,8 @@ if (manifest.scripts?.['verify:phase2'] !== 'bash scripts/verify-phase2.sh') {
 }
 NODE
 
-rg -F 'run: pnpm verify:phase2' "$workflow"
-rg -F "WIRELENS_REQUIRE_E2E: '1'" "$workflow"
-rg -F 'web/playwright-report/' "$workflow"
-rg -F 'web/test-results/' "$workflow"
-rg -F 'build/' "$workflow"
+rg -Fq 'run: pnpm verify:phase2' "$workflow"
+rg -Fq "WIRELENS_REQUIRE_E2E: '1'" "$workflow"
+rg -Fq 'web/playwright-report/' "$workflow"
+rg -Fq 'web/test-results/' "$workflow"
+rg -Fq 'build/' "$workflow"

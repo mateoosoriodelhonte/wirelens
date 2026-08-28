@@ -1,22 +1,26 @@
-# Filter and protocol roadmap
+# Protocol and inspection status
 
-This page separates the Phase 1 proof from the wider V1 design. A listed item
-is not a claim that the current UI implements it.
+WireLens Phase 2 keeps one bounded C++ parser for native and browser use.
 
-| Area           | Phase 1 status                                      | Later V1 direction                                                                 |
-| -------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Classic PCAP   | Proven with a deterministic little-endian fixture   | Add more valid and invalid capture cases                                           |
-| Ethernet       | Proven, including bounded 802.1Q/802.1ad tag decode | Broader stacked-tag cases and field-detail tests                                   |
-| IPv4           | Proven                                              | Fragment facts without fragment reassembly                                         |
-| TCP            | Proven for a three-packet SYN/SYN-ACK/ACK flow      | Bounded flows, sequence events, retransmission evidence, HTTP and TLS metadata     |
-| PCAPNG         | Not in the Phase 1 proof                            | Validate common Section Header, Interface Description, and Enhanced Packet blocks  |
-| IPv6           | Not in the Phase 1 proof                            | Base and bounded extension-header traversal                                        |
-| UDP and DNS    | Not in the Phase 1 proof                            | Structurally valid DNS exchanges and latency                                       |
-| HTTP           | Not in the Phase 1 proof                            | Sanitized request/response headers and pairing                                     |
-| TLS            | Not in the Phase 1 proof                            | Visible ClientHello/ServerHello metadata and SNI                                   |
-| Filter grammar | Not exposed in the Phase 1 UI                       | Case-insensitive AND terms: `tcp`, `udp`, `dns`, `http`, `tls`, `ip:`, and `port:` |
-| Search         | Not exposed in the Phase 1 UI                       | Normalized index without raw payload text                                          |
+| Area          | Phase 2 status                                                          | Boundary                          |
+| ------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| Classic PCAP  | Little- and big-endian, microsecond and nanosecond variants             | Offline files only                |
+| PCAPNG        | Common section, interface, and enhanced-packet blocks                   | Bounded blocks and interfaces     |
+| Ethernet      | Ethernet II with bounded VLAN tags                                      | No other link types               |
+| IPv4 and IPv6 | IPv4 plus bounded IPv6 extension traversal                              | No fragment reassembly            |
+| TCP and UDP   | Flow facts, TCP lifecycle, reset, and retransmission evidence           | No stream export                  |
+| DNS           | Bounded questions, answers, exchange matching, and neutral observations | Port 53 only                      |
+| HTTP          | Sanitized HTTP/1.0 and HTTP/1.1 request/response metadata               | No bodies; secret values redacted |
+| TLS           | Initial ClientHello and ServerHello metadata                            | No decryption or key material     |
+| Inspection    | Packet table, layers, sequence, selected-packet hex, field highlight    | One packet buffer at most         |
+| Filter        | Case-insensitive AND terms for protocol, IP, and port                   | Invalid text stays visible        |
+| Search        | Packet number, IP, hostname, port, protocol, and sanitized path         | No raw payload index              |
+| Evidence      | Neutral observations link to packet evidence                            | No attack or fault claims         |
 
-The roadmap does not add live capture, packet sending, replay, scanning,
-probing, decryption, raw stream export, telemetry, or capture upload. Those are
-outside the approved product boundary.
+Later V1 work can add more bounded protocol detail, usability work, and
+measured performance changes. A binary or streaming transport needs benchmark
+evidence and a separate accepted architecture decision.
+
+The product does not add live capture, interface access, packet sending,
+replay, scanning, probing, decryption, capture upload, a backend, telemetry, or
+analytics.

@@ -24,6 +24,7 @@ interface WasmMeasurement {
   parseAndSerializationMs: number;
   bridgeDecodeJsonMs: number;
   wasmLinearMemoryPeakBytes: number;
+  workerStartupMs: number;
   workerRoundTripMs: number;
 }
 
@@ -69,8 +70,15 @@ async function measureWasmInPage(page: Page, bytes: Uint8Array): Promise<WasmMea
       }),
     );
     const worker = new Worker(workerUrl);
-    const workerRoundTripMs = await new Promise<number>((resolve) => {
+    const workerStartupStart = performance.now();
+    const workerStartupMs = await new Promise<number>((resolve, reject) => {
+      worker.onerror = () => reject(new Error('benchmark echo worker failed during startup'));
+      worker.onmessage = () => resolve(performance.now() - workerStartupStart);
+      worker.postMessage(null);
+    });
+    const workerRoundTripMs = await new Promise<number>((resolve, reject) => {
       const workerStart = performance.now();
+      worker.onerror = () => reject(new Error('benchmark echo worker failed during transport'));
       worker.onmessage = () => resolve(performance.now() - workerStart);
       worker.postMessage(document);
     });
@@ -82,6 +90,7 @@ async function measureWasmInPage(page: Page, bytes: Uint8Array): Promise<WasmMea
       parseAndSerializationMs,
       bridgeDecodeJsonMs,
       wasmLinearMemoryPeakBytes: module.HEAPU8.byteLength,
+      workerStartupMs,
       workerRoundTripMs,
     };
   }, Array.from(bytes));
@@ -92,7 +101,7 @@ test('records browser and WASM benchmark measurements without timing thresholds'
   browserName,
 }, testInfo) => {
   test.skip(process.env.WIRELENS_BENCHMARK !== '1', 'Opt-in benchmark; set WIRELENS_BENCHMARK=1');
-  test.skip(browserName !== 'chromium', 'Browser memory and benchmark evidence require Chromium');
+  test.skip(browserName !== 'chromium', 'The reproducible browser benchmark baseline is Chromium');
   test.setTimeout(180_000);
   const fixtures: BenchmarkResult['fixtures'] = [];
   for (const profile of [
@@ -112,6 +121,7 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       bridgeDecodeJsonMs: [],
       wasmLinearMemoryPeakBytes: [],
     };
+    const workerStartup: number[] = [];
     const workerRoundTrip: number[] = [];
     const firstOverview: number[] = [];
     const filterLatency: number[] = [];
@@ -137,6 +147,7 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       wasm.parseAndSerializationMs.push(measurement.parseAndSerializationMs);
       wasm.bridgeDecodeJsonMs.push(measurement.bridgeDecodeJsonMs);
       wasm.wasmLinearMemoryPeakBytes.push(measurement.wasmLinearMemoryPeakBytes);
+      workerStartup.push(measurement.workerStartupMs);
       workerRoundTrip.push(measurement.workerRoundTripMs);
     }
     // measureUserAgentSpecificMemory() is a point-in-time snapshot, not a peak.
@@ -159,6 +170,7 @@ test('records browser and WASM benchmark measurements without timing thresholds'
         peakMemoryBytes: memory,
       },
       browser: {
+        workerStartupMs: summarize(workerStartup),
         workerRoundTripMs: summarize(workerRoundTrip),
         firstOverviewMs: summarize(firstOverview),
         filterLatencyMs: summarize(filterLatency),
@@ -183,9 +195,9 @@ test('records browser and WASM benchmark measurements without timing thresholds'
       runtime: await page.evaluate(() => navigator.userAgent),
       buildType: 'production',
       command:
-        'pnpm --dir web test:e2e --project=' +
+        'WIRELENS_BENCHMARK=1 pnpm --dir web test:e2e --project=' +
         testInfo.project.name +
-        ' benchmark-performance.spec.ts',
+        ' e2e/phase-2/benchmark-performance.spec.ts',
       runCount: RUNS,
     },
     fixtures,

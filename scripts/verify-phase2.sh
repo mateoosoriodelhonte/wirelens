@@ -32,6 +32,8 @@ run_step 'Check toolchain bootstrap isolation' bash scripts/tests/bootstrap-loca
 run_step 'Build deterministic synthetic fixtures' pnpm --dir fixtures build
 run_step 'Check fixture tests and manifests' pnpm --dir fixtures test
 run_step 'Check generated fixture determinism' git diff --exit-code -- fixtures/generated fixtures/manifests
+run_step 'Generate deterministic benchmark captures' pnpm --dir benchmarks generate
+run_step 'Check benchmark determinism and result schema' pnpm --dir benchmarks test
 
 run_step 'Configure native debug build' "$cmake" --preset native-debug --fresh
 run_step 'Build native targets' "$cmake" --build --preset native-debug --parallel

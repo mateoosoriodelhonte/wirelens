@@ -36,6 +36,7 @@ export interface BenchmarkFixtureResult {
     peakMemoryBytes: MemorySamples;
   } | null;
   browser: {
+    workerStartupMs: Samples;
     workerRoundTripMs: Samples;
     firstOverviewMs: Samples;
     filterLatencyMs: Samples;
@@ -145,7 +146,13 @@ export function validateBenchmarkResult(value: unknown): BenchmarkResult {
         'wasmLinearMemoryPeakBytes',
         'peakMemoryBytes',
       ],
-      browser: ['workerRoundTripMs', 'firstOverviewMs', 'filterLatencyMs', 'peakMemoryBytes'],
+      browser: [
+        'workerStartupMs',
+        'workerRoundTripMs',
+        'firstOverviewMs',
+        'filterLatencyMs',
+        'peakMemoryBytes',
+      ],
     };
     for (const side of ['native', 'wasm', 'browser'] as const) {
       const valueForSide = fixture[side];
@@ -156,7 +163,7 @@ export function validateBenchmarkResult(value: unknown): BenchmarkResult {
           fail(`result.fixtures[${index}].${side}.${required}`, 'is required');
       }
       for (const [name, metric] of Object.entries(metrics)) {
-        if (name === 'peakMemoryBytes')
+        if (name === 'peakMemoryBytes' || name === 'wasmLinearMemoryPeakBytes')
           memorySet(metric, `result.fixtures[${index}].${side}.${name}`, runCount);
         else metricSet(metric, `result.fixtures[${index}].${side}.${name}`, runCount);
       }

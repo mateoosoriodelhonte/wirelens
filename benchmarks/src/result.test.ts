@@ -63,6 +63,16 @@ describe('benchmark result validation', () => {
     expect(() => validateBenchmarkResult(value)).toThrow(/supported/);
   });
 
+  test('validates the WASM linear-memory high-water mark as memory', () => {
+    const value = structuredClone(validResult);
+    value.fixtures[0].wasm!.wasmLinearMemoryPeakBytes = {
+      samples: [20, 21, 22],
+      median: 21,
+      supported: false,
+    };
+    expect(() => validateBenchmarkResult(value)).toThrow(/supported/);
+  });
+
   test('rejects a duplicate or missing complete profile', () => {
     const value = structuredClone(validResult);
     value.fixtures.push({ ...value.fixtures[0], profile: 'medium' });

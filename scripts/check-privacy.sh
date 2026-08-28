@@ -9,7 +9,7 @@ if [[ ! -d "$web_source" ]]; then
   exit 1
 fi
 
-# Phase 1 has no capture-related network, browser persistence, or unsafe HTML
+# WireLens has no capture-related network, browser persistence, or unsafe HTML
 # path. Same-origin WebAssembly loading is generated outside web/src.
 patterns='fetch\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource|\{@html\}|innerHTML|localStorage|sessionStorage|indexedDB|document\.cookie'
 if rg -n --regexp "$patterns" "$web_source"; then

@@ -104,8 +104,15 @@
     "browser": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["workerRoundTripMs", "firstOverviewMs", "filterLatencyMs", "peakMemoryBytes"],
+      "required": [
+        "workerStartupMs",
+        "workerRoundTripMs",
+        "firstOverviewMs",
+        "filterLatencyMs",
+        "peakMemoryBytes"
+      ],
       "properties": {
+        "workerStartupMs": { "$ref": "#/$defs/samples" },
         "workerRoundTripMs": { "$ref": "#/$defs/samples" },
         "firstOverviewMs": { "$ref": "#/$defs/samples" },
         "filterLatencyMs": { "$ref": "#/$defs/samples" },

@@ -44,4 +44,24 @@ describe('benchmark JSON schema', () => {
     };
     expect(validate(validateBenchmarkResult(value))).toBe(true);
   });
+
+  test('validates complete WASM and browser metric sets', () => {
+    const validate = new Ajv2020({ strict: true }).compile(schema);
+    const value = structuredClone(sample);
+    value.fixtures[0].wasm = {
+      moduleStartupMs: { samples: [1], median: 1 },
+      parseAndSerializationMs: { samples: [2], median: 2 },
+      bridgeDecodeJsonMs: { samples: [3], median: 3 },
+      wasmLinearMemoryPeakBytes: { samples: [4], median: 4, supported: true },
+      peakMemoryBytes: { samples: [], median: null, supported: false },
+    };
+    value.fixtures[0].browser = {
+      workerStartupMs: { samples: [5], median: 5 },
+      workerRoundTripMs: { samples: [6], median: 6 },
+      firstOverviewMs: { samples: [7], median: 7 },
+      filterLatencyMs: { samples: [8], median: 8 },
+      peakMemoryBytes: { samples: [], median: null, supported: false },
+    };
+    expect(validate(validateBenchmarkResult(value))).toBe(true);
+  });
 });
