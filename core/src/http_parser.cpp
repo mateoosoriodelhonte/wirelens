@@ -202,7 +202,8 @@ std::optional<Message> parse_message(const ApplicationStream& stream, CaptureDoc
         const auto method = line.substr(0, firstSpace);
         const auto targetRaw = line.substr(firstSpace + 1U, secondSpace - firstSpace - 1U);
         if (!std::all_of(method.begin(), method.end(), [](const auto c) { return token_char(static_cast<unsigned char>(c)); }) ||
-            targetRaw.empty() || targetRaw.find_first_of(" \t\r\n") != std::string::npos ||
+            targetRaw.empty() || targetRaw.find('#') != std::string::npos ||
+            targetRaw.find_first_of(" \t\r\n") != std::string::npos ||
             !std::all_of(targetRaw.begin(), targetRaw.end(), [](const auto c) {
               const auto byte = static_cast<unsigned char>(c);
               return byte >= 0x21U && byte <= 0x7eU;
@@ -297,32 +298,34 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
     return left.firstPacket < right.firstPacket;
   });
 
-  std::optional<HttpExchange> pending;
+  std::map<std::string, HttpExchange> pending;
   std::map<std::string, bool> ambiguousFlows;
   for (const auto& message : messages) {
     if (message.requestValue && message.fromClient) {
-      if (pending && pending->flowId == message.flowId) {
-        capture.httpExchanges.push_back(std::move(*pending));
-        pending.reset();
+      const auto existing = pending.find(message.flowId);
+      if (existing != pending.end()) {
+        capture.httpExchanges.push_back(std::move(existing->second));
+        pending.erase(existing);
         ambiguousFlows[message.flowId] = true;
-      } else if (pending) {
-        capture.httpExchanges.push_back(std::move(*pending));
-        pending.reset();
       }
       if (ambiguousFlows[message.flowId]) {
         capture.httpExchanges.push_back({"http-exchange-0", message.flowId, message.requestValue,
                                          std::nullopt, std::nullopt, false});
       } else {
-        pending = HttpExchange{"http-exchange-0", message.flowId, message.requestValue, std::nullopt, std::nullopt, false};
+        pending.emplace(message.flowId,
+                        HttpExchange{"http-exchange-0", message.flowId, message.requestValue, std::nullopt,
+                                     std::nullopt, false});
       }
       continue;
     }
     if (!message.responseValue || message.fromClient)
       continue;
-    if (pending && pending->flowId == message.flowId && !ambiguousFlows[message.flowId]) {
-      pending->response = message.responseValue;
-      pending->matched = true;
-      const auto requestPacket = pending->request->packetNumbers.empty() ? 0U : pending->request->packetNumbers.back();
+    const auto pendingIt = pending.find(message.flowId);
+    if (pendingIt != pending.end() && !ambiguousFlows[message.flowId]) {
+      auto& request = pendingIt->second;
+      request.response = message.responseValue;
+      request.matched = true;
+      const auto requestPacket = request.request->packetNumbers.empty() ? 0U : request.request->packetNumbers.back();
       const auto responsePacket = message.packetNumbers.empty() ? 0U : message.packetNumbers.front();
       const auto requestIt = std::find_if(packets.begin(), packets.end(), [&](const auto& packet) {
         return packet.packet.number == requestPacket;
@@ -333,17 +336,17 @@ void build_http(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
       if (requestIt != packets.end() && responseIt != packets.end()) {
         const auto start = std::stoull(requestIt->packet.timestampNs);
         const auto end = std::stoull(responseIt->packet.timestampNs);
-        pending->latencyNs = std::to_string(end >= start ? end - start : 0U);
+        request.latencyNs = std::to_string(end >= start ? end - start : 0U);
       }
-      capture.httpExchanges.push_back(std::move(*pending));
-      pending.reset();
+      capture.httpExchanges.push_back(std::move(request));
+      pending.erase(pendingIt);
     } else {
       capture.httpExchanges.push_back({"http-exchange-0", message.flowId, std::nullopt,
                                        message.responseValue, std::nullopt, false});
     }
   }
-  if (pending)
-    capture.httpExchanges.push_back(std::move(*pending));
+  for (auto& [flowId, request] : pending)
+    capture.httpExchanges.push_back(std::move(request));
   for (std::size_t index = 0; index < capture.httpExchanges.size(); ++index)
     capture.httpExchanges[index].id = "http-exchange-" + std::to_string(index + 1U);
 }

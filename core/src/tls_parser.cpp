@@ -80,7 +80,7 @@ std::vector<std::size_t> evidence_packets(const ApplicationStream& stream, const
 }
 
 bool parse_extensions(const std::vector<std::byte>& bytes, const std::size_t begin,
-                      const std::size_t length, Hello& hello) {
+                      const std::size_t length, Hello& hello, bool& serverNameLimit) {
   if (length > kMaxTlsExtensionBytes || begin > bytes.size() || length > bytes.size() - begin)
     return false;
   const auto end = begin + length;
@@ -107,8 +107,16 @@ bool parse_extensions(const std::vector<std::byte>& bytes, const std::size_t beg
         item += 3U;
         if (nameLength > listEnd - item)
           return false;
-        if (nameType == 0U && !hello.serverName)
-          hello.serverName = ascii_name(bytes, item, nameLength);
+        if (nameType == 0U && !hello.serverName) {
+          if (nameLength == 0U || nameLength > kMaxTlsServerNameBytes) {
+            serverNameLimit = true;
+            return false;
+          }
+          if (const auto name = ascii_name(bytes, item, nameLength))
+            hello.serverName = *name;
+          else
+            return false;
+        }
         item += nameLength;
       }
       if (item != listEnd)
@@ -173,6 +181,7 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
       return std::nullopt;
     const auto helloBegin = body + 4U;
     const auto helloEnd = helloBegin + handshakeLength;
+    bool serverNameLimit = false;
     if (handshakeType == 1U) {
       if (handshakeLength < 34U)
         return std::nullopt;
@@ -209,8 +218,14 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
         position += 2U;
         if (extensionLength > helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
           return std::nullopt;
-        if (!parse_extensions(bytes, position, extensionLength, result))
+        if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
+          if (serverNameLimit)
+            add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT", "TLS server name exceeds the 253 byte limit",
+                                     stream.flowId, std::nullopt,
+                                     stream.packetNumbers.empty() ? std::nullopt
+                                                                   : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
           return std::nullopt;
+        }
       } else if (position != helloEnd) {
         return std::nullopt;
       }
@@ -248,8 +263,14 @@ std::optional<Hello> parse_hello(const ApplicationStream& stream, CaptureDocumen
       position += 2U;
       if (extensionLength > helloEnd - position || extensionLength > kMaxTlsExtensionBytes)
         return std::nullopt;
-      if (!parse_extensions(bytes, position, extensionLength, result))
+      if (!parse_extensions(bytes, position, extensionLength, result, serverNameLimit)) {
+        if (serverNameLimit)
+          add_diagnostic(capture, {"warning", "TLS_SERVER_NAME_LIMIT", "TLS server name exceeds the 253 byte limit",
+                                   stream.flowId, std::nullopt,
+                                   stream.packetNumbers.empty() ? std::nullopt
+                                                                 : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
         return std::nullopt;
+      }
     } else if (position != helloEnd) {
       return std::nullopt;
     }
@@ -299,15 +320,20 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
       continue;
     auto hello = parse_hello(stream, capture);
     if (!hello) {
-      if (recognized_tls_prefix(stream))
+      const auto specificLimit = std::any_of(capture.diagnostics.begin(), capture.diagnostics.end(),
+                                             [&](const auto& diagnostic) {
+                                               return diagnostic.context == stream.flowId &&
+                                                      (diagnostic.code == "TLS_RECORD_LIMIT" ||
+                                                       diagnostic.code == "TLS_HANDSHAKE_LIMIT" ||
+                                                       diagnostic.code == "TLS_SERVER_NAME_LIMIT");
+                                             });
+      if (recognized_tls_prefix(stream) && !specificLimit)
         add_diagnostic(capture, {"warning", "TLS_MALFORMED", "Recognized TLS prefix failed strict record or handshake parsing",
                                  stream.flowId, std::nullopt,
                                  stream.packetNumbers.empty() ? std::nullopt
                                                                : std::optional<std::size_t>{stream.packetNumbers.front()}, 1U});
       continue;
     }
-    if (hello->client != stream.fromClient)
-      continue;
     auto& pair = handshakes[stream.flowId];
     if (hello->client) {
       if (!pair.first)
@@ -323,7 +349,8 @@ void build_tls(CaptureDocument& capture, std::vector<ParsedPacket>& packets,
   }
   for (const auto& [flowId, pair] : handshakes) {
     TlsHandshake handshake{"tls-handshake-0", flowId, std::nullopt, std::nullopt,
-                           pair.first.has_value() && pair.second.has_value(),
+                           pair.first.has_value() && pair.second.has_value() &&
+                               pair.first->packet < pair.second->packet,
                            "WireLens does not decrypt TLS application data."};
     if (pair.first) {
       handshake.clientHello = TlsClientHello{pair.first->recordVersion, pair.first->legacyVersion,

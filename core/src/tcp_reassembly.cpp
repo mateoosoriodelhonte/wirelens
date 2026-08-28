@@ -3,6 +3,7 @@
 #include "wirelens/parser.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -152,7 +153,7 @@ std::vector<ApplicationStream> reconstruct_tcp_prefixes(
     Direction server;
   };
   std::map<std::string, FlowDirections> directions;
-  std::map<std::string, std::uint32_t> bases;
+  std::map<std::string, std::array<std::optional<std::uint32_t>, 2>> bases;
   for (const auto& packet : packets) {
     if (!packet.tcp.valid || !packet.packet.flowId || packet.tcp.payload.empty())
       continue;
@@ -165,9 +166,11 @@ std::vector<ApplicationStream> reconstruct_tcp_prefixes(
     // after flow construction and avoid treating a reused port as a direction change.
     const bool clientDirection = packet.packet.sourceEndpointId == flowIt->clientEndpointId;
     auto& direction = clientDirection ? directions[flow].client : directions[flow].server;
-    if (!bases.contains(flow))
-      bases.emplace(flow, packet.tcp.sequence);
-    const auto start = sequence_offset(bases.at(flow), packet.tcp.sequence);
+    const auto directionIndex = clientDirection ? 0U : 1U;
+    auto& base = bases[flow][directionIndex];
+    if (!base)
+      base = packet.tcp.sequence;
+    const auto start = sequence_offset(*base, packet.tcp.sequence);
     direction.segments.push_back({start, packet.tcp.payload, packet.packet.number,
                                   packet.tcp.payloadComplete});
   }
