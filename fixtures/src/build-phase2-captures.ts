@@ -41,12 +41,17 @@ const u32 = (b: Uint8Array, o: number, v: number, le: boolean) => {
   b[o + 2] = le ? (v >>> 16) & 255 : (v >>> 8) & 255;
   b[o + 3] = le ? (v >>> 24) & 255 : v & 255;
 };
-async function save(name: string, bytes: Uint8Array): Promise<void> {
+async function save(
+  name: string,
+  bytes: Uint8Array,
+  packets: number[] = [1, 2, 3],
+  expectedFacts?: Record<string, unknown>,
+): Promise<void> {
   const file = `${name}.pcap`;
   await writeFile(resolve(generated, file), bytes);
   await writeFile(
     resolve(manifests, `${name}.json`),
-    await manifestJson(name, file, bytes, [1, 2, 3]),
+    await manifestJson(name, file, bytes, packets, expectedFacts),
   );
 }
 async function savePcapng(name: string, bytes: Uint8Array, packets: number[]): Promise<void> {
@@ -242,12 +247,23 @@ interface TcpPacket {
   sequence: number;
   acknowledgment: number;
   flags: number;
-  payload?: string;
+  payload?: string | Uint8Array;
 }
 
-function tcpPcap(packets: TcpPacket[]): Uint8Array {
+interface TcpPcapOptions {
+  clientPort?: number;
+  serverPort?: number;
+}
+
+function tcpPcap(packets: TcpPacket[], options: TcpPcapOptions = {}): Uint8Array {
   const encoder = new TextEncoder();
-  const payloads = packets.map((packet) => encoder.encode(packet.payload ?? ''));
+  const payloads = packets.map((packet) =>
+    typeof packet.payload === 'string'
+      ? encoder.encode(packet.payload)
+      : (packet.payload ?? new Uint8Array()),
+  );
+  const clientPort = options.clientPort ?? 51_515;
+  const serverPort = options.serverPort ?? 443;
   const frameLength = (index: number) => 14 + 20 + 20 + payloads[index].byteLength;
   const total = 24 + packets.reduce((sum, _packet, index) => sum + 16 + frameLength(index), 0);
   const result = new Uint8Array(total);
@@ -286,8 +302,8 @@ function tcpPcap(packets: TcpPacket[]): Uint8Array {
     );
     writeInternetChecksum(result, ip + 10, ip, 20);
     const tcp = ip + 20;
-    u16(result, tcp, packet.clientToServer ? 51_515 : 443, false);
-    u16(result, tcp + 2, packet.clientToServer ? 443 : 51_515, false);
+    u16(result, tcp, packet.clientToServer ? clientPort : serverPort, false);
+    u16(result, tcp + 2, packet.clientToServer ? serverPort : clientPort, false);
     u32(result, tcp + 4, packet.sequence, false);
     u32(result, tcp + 8, packet.acknowledgment, false);
     result[tcp + 12] = 0x50;
@@ -316,6 +332,161 @@ const tcpRetransmission = tcpPcap([
   { clientToServer: true, sequence: 1006, acknowledgment: 5001, flags: 0x11 },
   { clientToServer: false, sequence: 5001, acknowledgment: 1007, flags: 0x11 },
 ]);
+
+export const HTTP_HEADER_SENTINEL = 'wirelens-http-header-secret-29';
+export const HTTP_BODY_SENTINEL = 'wirelens-http-body-secret-29';
+
+const httpBody = `{"value":"${HTTP_BODY_SENTINEL}"}`;
+const httpRequestParts = [
+  `POST /search?term=private&sort=recent HTTP/1.1\r\nHost: example.test\r\nAuthorization: Bearer ${HTTP_HEADER_SENTINEL}\r\n`,
+  `Cookie: session=${HTTP_HEADER_SENTINEL}\r\nX-Api-Key: ${HTTP_HEADER_SENTINEL}\r\nContent-Type: application/json\r\nContent-Length: ${httpBody.length}\r\n\r\n`,
+  httpBody,
+];
+const httpRequestByteLength = httpRequestParts.reduce(
+  (length, part) => length + new TextEncoder().encode(part).byteLength,
+  0,
+);
+const httpResponse =
+  'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nServer: wirelens-test\r\nDate: Thu, 01 Jan 1970 00:00:00 GMT\r\n\r\n{"ok":true}';
+
+export function buildPlaintextHttpPcap(): Uint8Array {
+  let clientSequence = 1001;
+  const requestPackets: TcpPacket[] = httpRequestParts.map((payload) => {
+    const packet = {
+      clientToServer: true,
+      sequence: clientSequence,
+      acknowledgment: 5001,
+      flags: 0x10,
+      payload,
+    };
+    clientSequence += new TextEncoder().encode(payload).byteLength;
+    return packet;
+  });
+  return tcpPcap(
+    [
+      { clientToServer: true, sequence: 1000, acknowledgment: 0, flags: 0x02 },
+      { clientToServer: false, sequence: 5000, acknowledgment: 1001, flags: 0x12 },
+      { clientToServer: true, sequence: 1001, acknowledgment: 5001, flags: 0x10 },
+      ...requestPackets,
+      {
+        clientToServer: false,
+        sequence: 5001,
+        acknowledgment: 1001 + httpRequestByteLength,
+        flags: 0x10,
+        payload: httpResponse,
+      },
+    ],
+    { serverPort: 80 },
+  );
+}
+
+function concatBytes(...parts: Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(parts.reduce((length, part) => length + part.byteLength, 0));
+  let offset = 0;
+  for (const part of parts) {
+    result.set(part, offset);
+    offset += part.byteLength;
+  }
+  return result;
+}
+
+function tlsExtension(type: number, data: Uint8Array): Uint8Array {
+  const result = new Uint8Array(4 + data.byteLength);
+  u16(result, 0, type, false);
+  u16(result, 2, data.byteLength, false);
+  result.set(data, 4);
+  return result;
+}
+
+function tlsHandshakeRecord(
+  handshakeType: number,
+  body: Uint8Array,
+  recordVersion: readonly [number, number],
+): Uint8Array {
+  const handshake = new Uint8Array(4 + body.byteLength);
+  handshake[0] = handshakeType;
+  handshake[1] = (body.byteLength >>> 16) & 0xff;
+  handshake[2] = (body.byteLength >>> 8) & 0xff;
+  handshake[3] = body.byteLength & 0xff;
+  handshake.set(body, 4);
+  const record = new Uint8Array(5 + handshake.byteLength);
+  record[0] = 0x16;
+  record.set(recordVersion, 1);
+  u16(record, 3, handshake.byteLength, false);
+  record.set(handshake, 5);
+  return record;
+}
+
+function buildTlsClientHello(): Uint8Array {
+  const encoder = new TextEncoder();
+  const serverName = encoder.encode('example.test');
+  const serverNameData = new Uint8Array(2 + 1 + 2 + serverName.byteLength);
+  u16(serverNameData, 0, 1 + 2 + serverName.byteLength, false);
+  serverNameData[2] = 0;
+  u16(serverNameData, 3, serverName.byteLength, false);
+  serverNameData.set(serverName, 5);
+  const supportedVersionsData = new Uint8Array([4, 3, 4, 3, 3]);
+  const extensions = concatBytes(
+    tlsExtension(0, serverNameData),
+    tlsExtension(43, supportedVersionsData),
+  );
+  const body = new Uint8Array(43 + extensions.byteLength);
+  u16(body, 0, 0x0303, false);
+  body.set(
+    Uint8Array.from({ length: 32 }, (_, index) => index + 1),
+    2,
+  );
+  body[34] = 0;
+  u16(body, 35, 2, false);
+  u16(body, 37, 0x1301, false);
+  body[39] = 1;
+  body[40] = 0;
+  u16(body, 41, extensions.byteLength, false);
+  body.set(extensions, 43);
+  return tlsHandshakeRecord(1, body, [0x03, 0x01]);
+}
+
+function buildTlsServerHello(): Uint8Array {
+  const supportedVersion = new Uint8Array([0x03, 0x04]);
+  const extensions = tlsExtension(43, supportedVersion);
+  const body = new Uint8Array(40 + extensions.byteLength);
+  u16(body, 0, 0x0303, false);
+  body.set(
+    Uint8Array.from({ length: 32 }, (_, index) => index + 0x21),
+    2,
+  );
+  body[34] = 0;
+  u16(body, 35, 0x1301, false);
+  body[37] = 0;
+  u16(body, 38, extensions.byteLength, false);
+  body.set(extensions, 40);
+  return tlsHandshakeRecord(2, body, [0x03, 0x03]);
+}
+
+export function buildTlsHandshakePcap(): Uint8Array {
+  return tcpPcap(
+    [
+      { clientToServer: true, sequence: 1000, acknowledgment: 0, flags: 0x02 },
+      { clientToServer: false, sequence: 5000, acknowledgment: 1001, flags: 0x12 },
+      { clientToServer: true, sequence: 1001, acknowledgment: 5001, flags: 0x10 },
+      {
+        clientToServer: true,
+        sequence: 1001,
+        acknowledgment: 5001,
+        flags: 0x10,
+        payload: buildTlsClientHello(),
+      },
+      {
+        clientToServer: false,
+        sequence: 5001,
+        acknowledgment: 1001 + buildTlsClientHello().byteLength,
+        flags: 0x10,
+        payload: buildTlsServerHello(),
+      },
+    ],
+    { serverPort: 443 },
+  );
+}
 
 await mkdir(generated, { recursive: true });
 await mkdir(manifests, { recursive: true });
@@ -362,3 +533,20 @@ await writeFile(
     Array.from({ length: 14 }, (_, i) => i + 1),
   ),
 );
+await save('plaintext-http', buildPlaintextHttpPcap(), [1, 2, 3, 4, 5, 6, 7], {
+  handshake: 'complete',
+  requestPacketNumbers: [4, 5, 6],
+  responsePacketNumbers: [7],
+  matched: true,
+  queryValues: 'redacted',
+  redactedHeaders: ['authorization', 'cookie', 'x-api-key'],
+  body: 'not-retained',
+});
+await save('tls-handshake', buildTlsHandshakePcap(), [1, 2, 3, 4, 5], {
+  handshake: 'complete',
+  clientHelloPacketNumbers: [4],
+  serverHelloPacketNumbers: [5],
+  serverName: 'example.test',
+  offeredVersions: ['TLS 1.3', 'TLS 1.2'],
+  negotiatedVersion: 'TLS 1.3',
+});
