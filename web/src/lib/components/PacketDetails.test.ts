@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 import PacketDetails from './PacketDetails.svelte';
 import { demoDocument } from '../demo-document';
 import type { Packet } from '../model';
@@ -85,5 +85,37 @@ describe('PacketDetails', () => {
     render(PacketDetails, { props: { packet, learningMode: true } });
     expect(screen.getByText(/UDP carries one datagram/i)).toBeVisible();
     expect(screen.getByText(/DNS maps names and network addresses/i)).toBeVisible();
+  });
+
+  it('offers keyboard buttons for bounded layer and field byte ranges', async () => {
+    const packet = structuredClone(demoDocument.packets[0]);
+    const tcp = packet.layers.find((layer) => layer.protocol === 'TCP');
+    if (!tcp) throw new Error('TCP fixture is missing');
+    tcp.byteRange = { captureOffset: 64, packetOffset: 34, length: 20 };
+    tcp.fields[0].byteRange = { captureOffset: 76, packetOffset: 46, length: 2 };
+    const onSelectByteRange = vi.fn();
+
+    render(PacketDetails, {
+      props: {
+        packet,
+        selectedByteRange: tcp.fields[0].byteRange,
+        onSelectByteRange,
+      },
+    });
+
+    const layerButton = screen.getByRole('button', { name: /show TCP layer bytes/i });
+    const fieldButton = screen.getByRole('button', { name: /show Flags field bytes/i });
+    expect(layerButton).toHaveAttribute('aria-pressed', 'false');
+    expect(fieldButton).toHaveAttribute('aria-pressed', 'true');
+
+    await fireEvent.click(layerButton);
+    expect(onSelectByteRange).toHaveBeenCalledWith(tcp.byteRange);
+    await fireEvent.click(fieldButton);
+    expect(onSelectByteRange).toHaveBeenLastCalledWith(tcp.fields[0].byteRange);
+  });
+
+  it('does not create byte controls for absent ranges', () => {
+    render(PacketDetails, { props: { packet: demoDocument.packets[0] } });
+    expect(screen.queryByRole('button', { name: /bytes/i })).not.toBeInTheDocument();
   });
 });

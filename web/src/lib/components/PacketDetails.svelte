@@ -1,7 +1,17 @@
 <script lang="ts">
   import { learningTextFor } from '../learning';
-  import type { Packet } from '../model';
-  let { packet, learningMode = false }: { packet: Packet; learningMode?: boolean } = $props();
+  import type { ByteRange, Packet } from '../model';
+  let {
+    packet,
+    learningMode = false,
+    selectedByteRange = null,
+    onSelectByteRange = () => undefined,
+  }: {
+    packet: Packet;
+    learningMode?: boolean;
+    selectedByteRange?: ByteRange | null;
+    onSelectByteRange?: (range: ByteRange) => void;
+  } = $props();
   const tcpLayer = $derived(packet.layers.find((layer) => layer.protocol === 'TCP'));
   const tcpFlags = $derived(tcpLayer?.fields.find((field) => field.name.toLowerCase() === 'flags'));
   const protocol = $derived(
@@ -23,6 +33,12 @@
     protocol === 'TCP'
       ? (tcpFlags?.explanationKey ?? tcpFallbackKey(tcpFlags?.value) ?? layerKey)
       : layerKey;
+  const rangeIsSelected = (range: ByteRange | null) =>
+    range !== null &&
+    selectedByteRange !== null &&
+    range.captureOffset === selectedByteRange.captureOffset &&
+    range.packetOffset === selectedByteRange.packetOffset &&
+    range.length === selectedByteRange.length;
 </script>
 
 <section class="details" aria-labelledby="details-title">
@@ -36,12 +52,29 @@
   <p class="summary">{packet.summary}</p>
   <div class="layers">
     {#each packet.layers as layer (layer.protocol)}<article class="layer">
-        <h3>{layer.protocol}</h3>
+        <div class="layer-heading">
+          <h3>{layer.protocol}</h3>
+          {#if layer.byteRange}<button
+              class="byte-control"
+              type="button"
+              aria-label={`Show ${layer.protocol} layer bytes`}
+              aria-pressed={rangeIsSelected(layer.byteRange)}
+              onclick={() => onSelectByteRange(layer.byteRange!)}>Show bytes</button
+            >{/if}
+        </div>
         <p>{layer.label}</p>
         <dl>
           {#each layer.fields as field (field.name)}<div>
               <dt>{field.name}</dt>
-              <dd>{field.value}</dd>
+              <dd>
+                <span>{field.value}</span>{#if field.byteRange}<button
+                    class="byte-control field-byte-control"
+                    type="button"
+                    aria-label={`Show ${field.name} field bytes`}
+                    aria-pressed={rangeIsSelected(field.byteRange)}
+                    onclick={() => onSelectByteRange(field.byteRange!)}>Show bytes</button
+                  >{/if}
+              </dd>
             </div>{/each}
         </dl>
         {#if learningMode}<p class="learning">
@@ -109,6 +142,12 @@
     font-size: 0.9rem;
     letter-spacing: 0.03em;
   }
+  .layer-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
   .layer > p {
     margin: 0.3rem 0 0.75rem;
     color: var(--muted);
@@ -130,11 +169,39 @@
     overflow-wrap: anywhere;
   }
   dd {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.5rem;
     min-width: 0;
     margin: 0;
     color: var(--ink);
     font-weight: 600;
     overflow-wrap: anywhere;
+  }
+  .byte-control {
+    flex: 0 0 auto;
+    padding: 0.28rem 0.45rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.35rem;
+    background: var(--surface);
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  .byte-control:hover,
+  .byte-control[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .byte-control:focus-visible {
+    outline: 3px solid var(--accent-soft);
+    outline-offset: 2px;
+  }
+  .field-byte-control {
+    margin-top: -0.15rem;
   }
   .learning {
     padding: 0.75rem;

@@ -3,9 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { demoDocument } from '$lib/demo-document';
 
 const { instances, MockParser } = vi.hoisted(() => {
-  const created: Array<{ parse: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> }> = [];
+  const created: Array<{
+    parse: ReturnType<typeof vi.fn>;
+    getPacketBytes: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  }> = [];
   class Parser {
     readonly parse = vi.fn();
+    readonly getPacketBytes = vi.fn(async () => new Uint8Array(54).buffer);
     readonly dispose = vi.fn(async () => undefined);
 
     constructor() {
@@ -243,5 +248,114 @@ describe('capture page', () => {
     expect(secondFlow).toHaveAttribute('aria-pressed', 'true');
     await screen.getByRole('button', { name: /packet 1/i }).click();
     expect(secondFlow).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('applies AND filters and preserves the last valid packet set on invalid input', async () => {
+    const filterDocument = structuredClone(demoDocument);
+    filterDocument.packets[1].layers.push({
+      protocol: 'DNS',
+      label: 'DNS response',
+      fields: [],
+      byteRange: null,
+      explanationKey: 'dns',
+    });
+    render(Page);
+    instances[0].parse.mockResolvedValue(filterDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('filter.pcap')] },
+    });
+
+    const filter = await screen.findByLabelText(/packet filter/i);
+    await fireEvent.input(filter, { target: { value: 'DnS port:443' } });
+    expect(screen.getByText('Showing 1 of 3 packets.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /packet 2:/i })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /packet 1:/i })).not.toBeInTheDocument();
+
+    await fireEvent.input(filter, { target: { value: 'dns icmp' } });
+    expect(screen.getByRole('alert')).toHaveTextContent(/unsupported filter term: icmp/i);
+    expect(screen.getByText('Showing 1 of 3 packets.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /packet 2:/i })).toBeVisible();
+  });
+
+  it('searches approved normalized facts and never raw or query values', async () => {
+    const searchDocument = structuredClone(demoDocument);
+    searchDocument.packets[1].layers.push({
+      protocol: 'HTTP',
+      label: 'HTTP request',
+      fields: [],
+      byteRange: null,
+      explanationKey: 'http',
+    });
+    searchDocument.httpExchanges = [
+      {
+        id: 'http-exchange-1',
+        flowId: 'tcp-flow-1',
+        request: {
+          line: 'GET /safe?token=QUERY_SECRET_SENTINEL HTTP/1.1',
+          method: 'GET',
+          target: '/safe?token=QUERY_SECRET_SENTINEL',
+          version: 'HTTP/1.1',
+          headers: [{ name: 'host', value: 'search.example.test', redacted: false }],
+          packetNumbers: [2],
+        },
+        response: null,
+        latencyNs: null,
+        matched: false,
+      },
+    ];
+    render(Page);
+    instances[0].parse.mockResolvedValue(searchDocument);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('search.pcap')] },
+    });
+
+    const search = await screen.findByLabelText(/search packet facts/i);
+    await fireEvent.input(search, { target: { value: 'HTTP search.example.test safe' } });
+    expect(screen.getByText('Showing 1 of 3 packets.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /packet 2:/i })).toBeVisible();
+
+    await fireEvent.input(search, { target: { value: 'QUERY_SECRET_SENTINEL' } });
+    expect(screen.getByText(/no packets match/i)).toBeVisible();
+    expect(screen.queryByRole('button', { name: /packet 2:/i })).not.toBeInTheDocument();
+  });
+
+  it('loads one selected packet buffer and highlights the exact selected field bytes', async () => {
+    const rangedDocument = structuredClone(demoDocument);
+    const tcp = rangedDocument.packets[0].layers.find((layer) => layer.protocol === 'TCP');
+    if (!tcp) throw new Error('TCP fixture is missing');
+    tcp.fields[0].byteRange = { captureOffset: 46, packetOffset: 12, length: 2 };
+    const packetBytes = new Uint8Array(Array.from({ length: 54 }, (_, index) => index)).buffer;
+    render(Page);
+    instances[0].parse.mockResolvedValue(rangedDocument);
+    instances[0].getPacketBytes.mockResolvedValue(packetBytes);
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('bytes.pcap')] },
+    });
+
+    expect(await screen.findByText('54 bytes')).toBeVisible();
+    expect(instances[0].getPacketBytes).toHaveBeenCalledWith(0);
+    await fireEvent.click(screen.getByRole('button', { name: /show Flags field bytes/i }));
+    const selected = screen.getAllByRole('mark');
+    expect(selected).toHaveLength(2);
+    expect(selected.map((element) => element.getAttribute('data-offset'))).toEqual(['12', '13']);
+  });
+
+  it('shows selected packet byte failures without dropping normalized packet details', async () => {
+    render(Page);
+    instances[0].parse.mockResolvedValue(demoDocument);
+    instances[0].getPacketBytes.mockRejectedValue({
+      code: 'TRUNCATED_PACKET_DATA',
+      message: 'Selected packet bytes are unavailable',
+      captureOffset: null,
+      packetNumber: 1,
+    });
+    await fireEvent.change(screen.getByLabelText(/capture file/i), {
+      target: { files: [capture('bytes-error.pcap')] },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /selected packet bytes are unavailable/i,
+    );
+    expect(screen.getByRole('heading', { name: 'Packet details' })).toBeVisible();
   });
 });
