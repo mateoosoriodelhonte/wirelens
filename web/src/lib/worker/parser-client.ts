@@ -54,6 +54,7 @@ export interface ParserClientOptions {
 
 interface PendingRequest<T> {
   kind: 'parse' | 'packet-bytes';
+  packetIndex?: number;
   resolve: (value: T) => void;
   reject: (reason?: unknown) => void;
 }
@@ -119,6 +120,7 @@ export class ParserClient {
     return new Promise<ArrayBuffer>((resolve, reject) => {
       this.pending.set(requestId, {
         kind: 'packet-bytes',
+        packetIndex,
         resolve: (value) => resolve(value as ArrayBuffer),
         reject,
       });
@@ -216,6 +218,10 @@ export class ParserClient {
       return;
     }
     if (response.type === 'packet-bytes') {
+      if (request.kind !== 'packet-bytes' || request.packetIndex !== response.packetIndex) {
+        this.rejectPending(response.requestId, new Error('Packet index response mismatch'));
+        return;
+      }
       this.resolvePending(response.requestId, response.buffer);
       return;
     }

@@ -8,11 +8,19 @@ export type CaptureState =
       fileName: string;
       document: CaptureDocument;
       selectedPacketId: string | null;
+      packetBytes: PacketBytesState;
     }
   | { status: 'error'; fileName: string | null; error: ParseError };
 
+export type PacketBytesState =
+  | { status: 'idle'; packetId: null; buffer: null; error: null }
+  | { status: 'loading'; packetId: string; buffer: null; error: null }
+  | { status: 'ready'; packetId: string; buffer: ArrayBuffer; error: null }
+  | { status: 'error'; packetId: string; buffer: null; error: ParseError };
+
 export interface CaptureParser {
   parse(file: File): Promise<CaptureDocument>;
+  getPacketBytes?(packetIndex: number): Promise<ArrayBuffer>;
   dispose(): Promise<void> | void;
 }
 
@@ -92,9 +100,14 @@ function asParseError(reason: unknown): ParseError {
   };
 }
 
+function emptyPacketBytes(): PacketBytesState {
+  return { status: 'idle', packetId: null, buffer: null, error: null };
+}
+
 export function createCaptureStore(parser: CaptureParser): CaptureStore {
   let state: CaptureState = { status: 'empty' };
   let operation = 0;
+  let packetBytesOperation = 0;
   let disposed = false;
   const subscribers = new Set<(next: CaptureState) => void>();
 
@@ -117,16 +130,20 @@ export function createCaptureStore(parser: CaptureParser): CaptureStore {
     async selectFile(file) {
       if (disposed) return;
       const currentOperation = ++operation;
+      packetBytesOperation += 1;
       publish({ status: 'loading', fileName: file.name });
       try {
         const document = await parser.parse(file);
         if (disposed || currentOperation !== operation) return;
+        const selectedPacketId = document.packets[0]?.id ?? null;
         publish({
           status: 'ready',
           fileName: file.name,
           document,
-          selectedPacketId: document.packets[0]?.id ?? null,
+          selectedPacketId,
+          packetBytes: emptyPacketBytes(),
         });
+        if (selectedPacketId) loadPacketBytes(document, selectedPacketId, currentOperation);
       } catch (reason) {
         if (disposed || currentOperation !== operation) return;
         if (reason instanceof Error && reason.name === 'ParseCancelledError') return;
@@ -137,14 +154,83 @@ export function createCaptureStore(parser: CaptureParser): CaptureStore {
     selectPacket(packetId) {
       if (state.status !== 'ready') return;
       if (!state.document.packets.some((packet) => packet.id === packetId)) return;
-      publish({ ...state, selectedPacketId: packetId });
+      packetBytesOperation += 1;
+      publish({ ...state, selectedPacketId: packetId, packetBytes: emptyPacketBytes() });
+      loadPacketBytes(state.document, packetId, operation);
     },
 
     async dispose() {
       if (disposed) return;
       disposed = true;
       operation += 1;
+      packetBytesOperation += 1;
+      if (state.status === 'ready') publish({ ...state, packetBytes: emptyPacketBytes() });
       await parser.dispose();
     },
   };
+
+  function loadPacketBytes(
+    document: CaptureDocument,
+    packetId: string,
+    currentOperation: number,
+  ): void {
+    if (!parser.getPacketBytes) return;
+    const packetIndex = document.packets.findIndex((packet) => packet.id === packetId);
+    if (packetIndex < 0) return;
+    const currentPacketBytesOperation = ++packetBytesOperation;
+    if (
+      state.status !== 'ready' ||
+      state.document !== document ||
+      state.selectedPacketId !== packetId
+    ) {
+      return;
+    }
+    publish({
+      ...state,
+      packetBytes: { status: 'loading', packetId, buffer: null, error: null },
+    });
+    void Promise.resolve()
+      .then(() => parser.getPacketBytes?.(packetIndex))
+      .then(
+        (buffer) => {
+          if (
+            !buffer ||
+            disposed ||
+            currentOperation !== operation ||
+            currentPacketBytesOperation !== packetBytesOperation ||
+            state.status !== 'ready' ||
+            state.document !== document ||
+            state.selectedPacketId !== packetId
+          ) {
+            return;
+          }
+          publish({
+            ...state,
+            packetBytes: { status: 'ready', packetId, buffer, error: null },
+          });
+        },
+        (reason: unknown) => {
+          if (
+            disposed ||
+            currentOperation !== operation ||
+            currentPacketBytesOperation !== packetBytesOperation ||
+            state.status !== 'ready' ||
+            state.document !== document ||
+            state.selectedPacketId !== packetId
+          ) {
+            return;
+          }
+          if (reason instanceof Error && reason.name === 'ParseCancelledError') return;
+          publish({
+            ...state,
+            packetBytes: {
+              status: 'error',
+              packetId,
+              buffer: null,
+              error: asParseError(reason),
+            },
+          });
+        },
+      );
+  }
 }

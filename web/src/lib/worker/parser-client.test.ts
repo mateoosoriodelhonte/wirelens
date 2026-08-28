@@ -291,4 +291,95 @@ describe('ParserClient', () => {
     client.release();
     await client.dispose();
   });
+
+  it('rejects invalid packet indexes before posting to the worker', async () => {
+    const worker = new FakeWorker();
+    const client = new ParserClient({ workerFactory: () => worker });
+    const parse = client.parse(validFile());
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(1));
+
+    await expect(client.getPacketBytes(-1)).rejects.toThrow(/non-negative integer/);
+    await expect(client.getPacketBytes(1.5)).rejects.toThrow(/non-negative integer/);
+    expect(worker.messages).toHaveLength(1);
+    await client.dispose();
+    await expect(parse).rejects.toBeInstanceOf(ParseCancelledError);
+  });
+
+  it('rejects a typed byte-fetch failure and ignores a later stale response', async () => {
+    const worker = new FakeWorker();
+    const client = new ParserClient({ workerFactory: () => worker });
+    const parse = client.parse(validFile());
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(1));
+    const parseRequest = worker.messages[0].message as Extract<WorkerRequest, { type: 'parse' }>;
+    worker.respond({
+      type: 'parse-complete',
+      requestId: parseRequest.requestId,
+      document: demoDocument,
+    });
+    await parse;
+
+    const bytes = client.getPacketBytes(0);
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(2));
+    const byteRequest = worker.messages[1].message as Extract<
+      WorkerRequest,
+      { type: 'packet-bytes' }
+    >;
+    worker.respond({
+      type: 'failed',
+      requestId: byteRequest.requestId,
+      error: {
+        code: 'TRUNCATED_PACKET_DATA',
+        message: 'Packet bytes are not available',
+        captureOffset: null,
+        packetNumber: 1,
+      },
+    });
+    await expect(bytes).rejects.toMatchObject({ code: 'TRUNCATED_PACKET_DATA' });
+    expect(client.pendingRequestCount).toBe(0);
+
+    const stale = client.getPacketBytes(0);
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(3));
+    client.release();
+    await expect(stale).rejects.toBeInstanceOf(ParseCancelledError);
+    worker.respond({
+      type: 'packet-bytes',
+      requestId: (worker.messages[2].message as Extract<WorkerRequest, { type: 'packet-bytes' }>)
+        .requestId,
+      packetIndex: 0,
+      buffer: new Uint8Array([9]).buffer,
+    });
+    expect(client.pendingRequestCount).toBe(0);
+    await client.dispose();
+  });
+
+  it('rejects a byte response for a different packet index', async () => {
+    const worker = new FakeWorker();
+    const client = new ParserClient({ workerFactory: () => worker });
+    const parse = client.parse(validFile());
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(1));
+    const parseRequest = worker.messages[0].message as Extract<WorkerRequest, { type: 'parse' }>;
+    worker.respond({
+      type: 'parse-complete',
+      requestId: parseRequest.requestId,
+      document: demoDocument,
+    });
+    await parse;
+
+    const bytes = client.getPacketBytes(0);
+    await vi.waitFor(() => expect(worker.messages).toHaveLength(2));
+    const byteRequest = worker.messages[1].message as Extract<
+      WorkerRequest,
+      { type: 'packet-bytes' }
+    >;
+    worker.respond({
+      type: 'packet-bytes',
+      requestId: byteRequest.requestId,
+      packetIndex: 1,
+      buffer: new Uint8Array([1]).buffer,
+    });
+
+    await expect(bytes).rejects.toThrow(/packet index/i);
+    expect(client.pendingRequestCount).toBe(0);
+    await client.dispose();
+  });
 });
